@@ -1,0 +1,28 @@
+{
+ "name": "Pool Glass Calculator",
+ "short_name": "Pool Glass",
+ "description": "Underwater window, floor glass, rim-flow and fish tank glass design with FEA and PDF report.",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#edf2f1",
+ "theme_color": "#16756a",
+ "icons": [
+  {
+   "src": "icons/icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icons/icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  },
+  {
+   "src": "icons/maskable-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}

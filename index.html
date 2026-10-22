@@ -1,0 +1,1618 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#16756a">
+<meta name="description" content="Pool and aquarium glass design: thickness, deflection, sacrificial ply, edge cover and channel depth, with FEA and a PDF report.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pool Glass">
+<title>Pool Glass Calculator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: engineer's calc sheet — calculator picker across the top, inputs rail on the left,
+   live results / drawings / FEA on the right, the step-by-step report sheet underneath. */
+:root{
+  --bg:#edf2f1; --panel:#ffffff; --panel-2:#f5f8f7; --ink:#13272a; --muted:#56696b; --line:#d2dddb;
+  --accent:#16756a; --accent-ink:#ffffff; --accent-soft:#d9eeea;
+  --water:#2c6bc9; --water-soft:rgba(44,107,201,.13); --glass:#cfe9e3; --glass-edge:#2c8f80; --sac:#e0a53a;
+  --frame:#7b8a8d; --ok:#1c7a44; --ok-bg:#dcf1e4; --bad:#b8352a; --bad-bg:#f9e0dd; --warn:#9a6000; --warn-bg:#fbedd2;
+  --f-display:'Barlow Semi Condensed','Arial Narrow',Arial,sans-serif;
+  --f-body:'Public Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1819; --panel:#132325; --panel-2:#182b2d; --ink:#e3eeec; --muted:#98aeac; --line:#2a4143;
+  --accent:#4cc0ad; --accent-ink:#04201c; --accent-soft:#173b37;
+  --water:#76a7ff; --water-soft:rgba(118,167,255,.16); --glass:#25504a; --glass-edge:#5cc6b4; --sac:#e8b35a;
+  --frame:#8d9ea0; --ok:#5fd08e; --ok-bg:#143524; --bad:#ff8a7c; --bad-bg:#3d1c19; --warn:#f0b75a; --warn-bg:#3a2b10; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1819; --panel:#132325; --panel-2:#182b2d; --ink:#e3eeec; --muted:#98aeac; --line:#2a4143;
+  --accent:#4cc0ad; --accent-ink:#04201c; --accent-soft:#173b37;
+  --water:#76a7ff; --water-soft:rgba(118,167,255,.16); --glass:#25504a; --glass-edge:#5cc6b4; --sac:#e8b35a;
+  --frame:#8d9ea0; --ok:#5fd08e; --ok-bg:#143524; --bad:#ff8a7c; --bad-bg:#3d1c19; --warn:#f0b75a; --warn-bg:#3a2b10; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5}
+.wrap{max-width:1380px;margin:0 auto;padding-block:20px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3,h4{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:.01em}
+h1{font-size:34px;font-weight:700;line-height:1.05}
+h2{font-size:22px;font-weight:600}
+h3{font-size:17px;font-weight:600}
+.mono,.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.eyebrow{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:600;color:var(--accent)}
+header.top{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
+header.top .lead{max-width:640px;display:grid;gap:6px}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+button,.btn{font:inherit;font-weight:600;font-size:13px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}
+button:hover,.btn:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button:focus-visible,input:focus-visible,select:focus-visible,.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.small{padding:4px 8px;font-size:12px}
+.disclaimer{border:1px solid var(--warn);background:var(--warn-bg);color:var(--ink);border-radius:var(--r);padding:10px 14px;font-size:13px;margin-bottom:16px}
+.disclaimer b{color:var(--warn)}
+/* calculator picker */
+.picker{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.pick{all:unset;cursor:pointer;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px;display:grid;grid-template-columns:96px 1fr;gap:12px;align-items:center}
+.pick:hover{border-color:var(--accent)}
+.pick:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pick[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--accent-soft)}
+.pick svg{width:96px;height:72px;display:block}
+.pick b{font-family:var(--f-display);font-size:17px;font-weight:600;display:block;line-height:1.15}
+.pick span{font-size:12px;color:var(--muted)}
+@media (max-width:980px){.picker{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:520px){.picker{grid-template-columns:1fr}}
+/* main grid */
+.main{display:grid;grid-template-columns:360px minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:980px){.main{grid-template-columns:1fr}}
+.rail{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:4px 0}
+.rail details{border-bottom:1px solid var(--line)}
+.rail details:last-child{border-bottom:0}
+.rail summary{cursor:pointer;padding:11px 16px;font-family:var(--f-display);font-weight:600;font-size:15px;list-style:none;display:flex;justify-content:space-between;align-items:center}
+.rail summary::-webkit-details-marker{display:none}
+.rail summary::after{content:'+';color:var(--muted);font-family:var(--f-mono)}
+.rail details[open] summary::after{content:'–'}
+.fields{display:grid;gap:10px;padding:0 16px 14px}
+.field{display:grid;gap:3px}
+.field label{font-size:12px;font-weight:600;color:var(--muted)}
+.field .row{display:flex;align-items:center;gap:6px}
+.field input[type=number],.field input[type=text],.field input[type=date],.field select,textarea{width:100%;min-width:0;font:inherit;font-size:14px;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--panel-2);color:var(--ink)}
+.field input[type=number]{font-family:var(--f-mono)}
+.field input[aria-invalid="true"]{border-color:var(--bad);background:var(--bad-bg)}
+.field .unit{font-size:12px;color:var(--muted);font-family:var(--f-mono);min-width:34px}
+.field .help{font-size:11.5px;color:var(--muted);line-height:1.35}
+.chk{display:flex;gap:8px;align-items:flex-start;font-size:13px}
+.chk input{margin-top:3px;accent-color:var(--accent)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.plies{display:grid;gap:6px}
+.ply{display:grid;grid-template-columns:62px 1fr auto;gap:8px;align-items:center}
+.ply .tag{font-size:11.5px;font-family:var(--f-mono);color:var(--muted)}
+.ply.sac .tag{color:var(--sac);font-weight:600}
+.stack{display:grid;gap:18px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
+.card-h{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+.verdicts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:640px){.verdicts{grid-template-columns:1fr}}
+.verdict{border-radius:var(--r);border:1px solid var(--line);padding:14px;display:grid;gap:8px;background:var(--panel-2)}
+.verdict.ok{border-color:var(--ok)}
+.verdict.bad{border-color:var(--bad)}
+.verdict h3{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700;font-family:var(--f-display);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}
+.pill.bad{background:var(--bad-bg);color:var(--bad)}
+.pill.warn{background:var(--warn-bg);color:var(--warn)}
+.pill.na{background:var(--panel-2);color:var(--muted);border:1px solid var(--line)}
+.kv{display:grid;grid-template-columns:1fr auto;gap:2px 12px;font-size:13px}
+.kv dt{color:var(--muted)}
+.kv .warn-t{color:var(--warn)}
+.kv dd{margin:0;font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right}
+.figs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}
+@media (max-width:760px){.figs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.fig{border:1px solid var(--line);border-radius:8px;padding:10px;display:grid;gap:2px}
+.fig small{color:var(--muted);font-size:11.5px}
+.fig b{font-family:var(--f-mono);font-size:18px;font-weight:500}
+.drawings{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px}
+@media (max-width:860px){.drawings{grid-template-columns:1fr}}
+.dwg{border:1px solid var(--line);border-radius:8px;background:var(--panel-2);padding:8px;min-width:0}
+.dwg svg{width:100%;height:auto;display:block}
+.dwg figcaption{font-size:12px;color:var(--muted);padding:4px 4px 0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);padding:6px 10px}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.fea-wrap{display:grid;gap:10px}
+.fea-wrap canvas{width:100%;height:auto;border-radius:6px;border:1px solid var(--line);background:var(--panel-2)}
+.legend{display:flex;align-items:center;gap:8px;font-size:12px;font-family:var(--f-mono)}
+.legend canvas{height:12px;width:220px;border:0;border-radius:3px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--f-display);font-weight:600;font-size:13px;letter-spacing:.03em;color:var(--muted)}
+td.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.sugg{margin:0;padding-left:18px;display:grid;gap:6px}
+.sugg li::marker{color:var(--accent)}
+/* report sheet */
+#report{margin-top:26px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:28px clamp(16px,4vw,44px)}
+.rsec{padding:14px 0 18px;border-bottom:1px solid var(--line);display:grid;gap:10px}
+.rsec:last-child{border-bottom:0}
+.rsec h2{font-size:20px}
+.rsec h2 .no{color:var(--accent);font-family:var(--f-mono);font-size:15px;margin-right:8px}
+.step{display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;font-size:13.5px}
+.step .sn{font-family:var(--f-mono);color:var(--muted);font-size:12px;padding-top:2px}
+.eq{font-family:var(--f-mono);font-size:12.5px;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:6px 9px;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+.rep-head{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:end;padding-bottom:12px;border-bottom:2px solid var(--ink)}
+.rep-head .meta{font-size:12.5px;display:grid;grid-template-columns:auto auto;gap:2px 14px}
+.rep-imgs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:700px){.rep-imgs{grid-template-columns:1fr}.rep-head{grid-template-columns:1fr}}
+.rep-imgs img{width:100%;border:1px solid var(--line);border-radius:6px;background:#fff}
+.signoff{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:8px}
+.signoff div{border-top:1px solid var(--ink);padding-top:4px;font-size:12px;color:var(--muted);min-height:48px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;font-size:13px;z-index:20}
+.sheet{display:grid;gap:10px;margin-top:10px}
+.sheet textarea{min-height:120px;font-family:var(--f-mono);font-size:12px}
+.csteps{margin:0;padding-left:20px;display:grid;gap:10px}
+.csteps .eq{margin-top:4px}
+/* PDF preview */
+.pv{position:fixed;inset:0;z-index:50;background:rgba(10,20,22,.82);display:flex;flex-direction:column}
+.pv[hidden]{display:none}
+.pv-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+.pv-sp{flex:1}
+.pv-count{font-size:12.5px}
+.pv-pages{flex:1;overflow:auto;padding:20px 16px;display:grid;gap:18px;justify-items:center;align-content:start}
+.pv-pages img{width:100%;max-width:820px;height:auto;background:#fff;box-shadow:0 4px 18px rgba(0,0,0,.35)}
+body.pv-open{overflow:hidden}
+/* exporting: fixed-width light sheet */
+body.exporting #report{width:780px;max-width:none;border:0;border-radius:0}
+@media print{
+  header.top,.picker,.main,.disclaimer.screen,.toast{display:none!important}
+  body{background:#fff}
+  #report{border:0;margin:0;padding:0}
+  .rsec{break-inside:avoid-page}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head><body><div class="wrap">
+  <header class="top">
+    <div class="lead">
+      <div class="eyebrow">Underwater glazing · SANS 10137 · EN 16612 · Roark · plate FEA</div>
+      <h1>Pool Glass Calculator</h1>
+      <div class="muted">Thickness, deflection, post-breakage and frame depth for pool windows, floor glass, rim-flow edges and fish tanks. Results update as you type.</div>
+    </div>
+    <div class="actions" id="actions">
+      <button class="primary" id="btnView" type="button">View PDF report</button>
+      <button id="btnPdf" type="button">Save PDF report</button>
+      <button id="btnPrint" type="button" hidden>Print</button>
+      <button id="btnEmail" type="button">Email</button>
+      <button id="btnShare" type="button">Share</button>
+      <button id="btnCode" type="button">Design code</button>
+    </div>
+  </header>
+  <div class="disclaimer screen"><b>Engineering guidance only.</b> This tool follows published methods (SANS 10137:2011 §6.8, EN 16612 strength model, Roark Table 11.4 and a linear plate finite-element model). Every design must be checked and signed off by a registered professional engineer or competent person (glazing) before glass is ordered or installed.</div>
+  <div id="sharePanel" class="card" hidden></div>
+  <nav class="picker" id="picker" aria-label="Calculator type"></nav>
+  <div class="main">
+    <aside class="rail" id="rail" aria-label="Inputs"></aside>
+    <section class="stack" id="results" aria-live="polite"></section>
+  </div>
+  <article id="report"></article>
+</div>
+<div class="pv" id="pdfView" role="dialog" aria-modal="true" aria-label="PDF report preview" hidden>
+  <div class="pv-bar"><b>Report preview</b><span class="pv-count muted"></span><span class="pv-sp"></span><button class="primary" id="pvSave" type="button">Download PDF</button><button id="pvClose" type="button">Close</button></div>
+  <div class="pv-pages"></div>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script src="libs/html2canvas.min.js"></script>
+<script src="libs/jspdf.umd.min.js"></script>
+<script>
+// Plate FEA engine: MITC4 Mindlin-Reissner quadrilateral, rectangular structured mesh,
+// banded Cholesky solver. Units N, mm, MPa.
+// opts: {a,b,nx,ny,E,nu,t,edges:{bottom,top,left,right} each 'F'|'S'|'C', q:(x,y)=>pressure MPa}
+function plateFEA(o) {
+  const {a, b, nx, ny, E, nu, t} = o;
+  const hx = a / nx, hy = b / ny;
+  const nnx = nx + 1, nny = ny + 1, nn = nnx * nny, ndof = 3 * nn;
+  const jFast = ny <= nx; // number nodes along the short direction first
+  const nid = jFast ? (i, j) => i * nny + j : (i, j) => j * nnx + i;
+  const D = E * t * t * t / (12 * (1 - nu * nu));
+  const Db = [[D, nu * D, 0], [nu * D, D, 0], [0, 0, D * (1 - nu) / 2]];
+  const G = E / (2 * (1 + nu)), Ds = 5 / 6 * G * t;
+  const xi = [-1, 1, 1, -1], et = [-1, -1, 1, 1];
+  const Nf = (s, r) => xi.map((x, k) => 0.25 * (1 + s * x) * (1 + r * et[k]));
+  const dNx = (s, r) => xi.map((x, k) => 0.25 * x * (1 + r * et[k]) * 2 / hx);
+  const dNy = (s, r) => xi.map((x, k) => 0.25 * et[k] * (1 + s * x) * 2 / hy);
+  const Bb = (s, r) => {
+    const dx = dNx(s, r), dy = dNy(s, r), B = [new Array(12).fill(0), new Array(12).fill(0), new Array(12).fill(0)];
+    for (let k = 0; k < 4; k++) {
+      B[0][3 * k + 1] = dx[k]; B[1][3 * k + 2] = dy[k]; B[2][3 * k + 1] = dy[k]; B[2][3 * k + 2] = dx[k];
+    }
+    return B;
+  };
+  const gxz = (s, r) => { const N = Nf(s, r), dx = dNx(s, r), row = new Array(12).fill(0); for (let k = 0; k < 4; k++) { row[3 * k] = dx[k]; row[3 * k + 1] = -N[k]; } return row; };
+  const gyz = (s, r) => { const N = Nf(s, r), dy = dNy(s, r), row = new Array(12).fill(0); for (let k = 0; k < 4; k++) { row[3 * k] = dy[k]; row[3 * k + 2] = -N[k]; } return row; };
+  const gA = gxz(0, -1), gB = gxz(0, 1), gC = gyz(-1, 0), gD = gyz(1, 0);
+  const Bs = (s, r) => [gA.map((v, k) => 0.5 * (1 - r) * v + 0.5 * (1 + r) * gB[k]), gC.map((v, k) => 0.5 * (1 - s) * v + 0.5 * (1 + s) * gD[k])];
+  const g = 1 / Math.sqrt(3), GP = [[-g, -g], [g, -g], [g, g], [-g, g]], detJ = hx * hy / 4;
+  const Ke = Array.from({length: 12}, () => new Array(12).fill(0));
+  for (const [s, r] of GP) {
+    const B = Bb(s, r), S = Bs(s, r);
+    for (let i = 0; i < 12; i++) for (let j = 0; j < 12; j++) {
+      let v = 0;
+      for (let p = 0; p < 3; p++) for (let q = 0; q < 3; q++) v += B[p][i] * Db[p][q] * B[q][j];
+      v += Ds * (S[0][i] * S[0][j] + S[1][i] * S[1][j]);
+      Ke[i][j] += v * detJ;
+    }
+  }
+  // band width
+  const enodes = (ex, ey) => [nid(ex, ey), nid(ex + 1, ey), nid(ex + 1, ey + 1), nid(ex, ey + 1)];
+  let bw = 0;
+  for (let ex = 0; ex < nx; ex++) for (let ey = 0; ey < ny; ey++) { const e = enodes(ex, ey); bw = Math.max(bw, 3 * (Math.max(...e) - Math.min(...e)) + 2); }
+  const W = bw + 1, K = new Float64Array(ndof * W), F = new Float64Array(ndof);
+  const add = (i, j, v) => { if (j >= i) K[i * W + (j - i)] += v; };
+  // 4x4 Gauss for load (waterline may cut an element)
+  const g4 = [[-0.8611363116, 0.3478548451], [-0.3399810436, 0.6521451549], [0.3399810436, 0.6521451549], [0.8611363116, 0.3478548451]];
+  for (let ex = 0; ex < nx; ex++) for (let ey = 0; ey < ny; ey++) {
+    const e = enodes(ex, ey), dof = [];
+    e.forEach(n => dof.push(3 * n, 3 * n + 1, 3 * n + 2));
+    for (let i = 0; i < 12; i++) for (let j = 0; j < 12; j++) add(dof[i], dof[j], Ke[i][j]);
+    const x0 = (ex + 0.5) * hx, y0 = (ey + 0.5) * hy;
+    for (const [s, ws] of g4) for (const [r, wr] of g4) {
+      const qv = o.q(x0 + s * hx / 2, y0 + r * hy / 2); if (!qv) continue;
+      const N = Nf(s, r);
+      for (let k = 0; k < 4; k++) F[3 * e[k]] += N[k] * qv * ws * wr * detJ;
+    }
+  }
+  // boundary conditions (penalty)
+  let maxd = 0; for (let i = 0; i < ndof; i++) maxd = Math.max(maxd, K[i * W]);
+  const P = maxd * 1e8, fixed = new Map();
+  const fix = (n, c) => { const d = 3 * n + c; if (!fixed.has(d)) { fixed.set(d, true); K[d * W] += P; } };
+  const edgeNodes = {bottom: [], top: [], left: [], right: []};
+  for (let i = 0; i < nnx; i++) { edgeNodes.bottom.push(nid(i, 0)); edgeNodes.top.push(nid(i, ny)); }
+  for (let j = 0; j < nny; j++) { edgeNodes.left.push(nid(0, j)); edgeNodes.right.push(nid(nx, j)); }
+  for (const side of ['bottom', 'top', 'left', 'right']) {
+    const c = o.edges[side]; if (c === 'F') continue;
+    const tang = (side === 'bottom' || side === 'top') ? 1 : 2; // rotation about the edge stays free for S
+    for (const n of edgeNodes[side]) { fix(n, 0); fix(n, tang); if (c === 'C') { fix(n, 1); fix(n, 2); } }
+  }
+  // banded Cholesky
+  const L = K; // in place, upper band storage
+  for (let i = 0; i < ndof; i++) {
+    const jmax = Math.min(ndof - 1, i + bw);
+    let d = L[i * W];
+    if (d <= 0) throw new Error('Plate is not stable with these supports (singular stiffness).');
+    d = Math.sqrt(d); L[i * W] = d;
+    for (let j = i + 1; j <= jmax; j++) L[i * W + (j - i)] /= d;
+    for (let k = i + 1; k <= jmax; k++) {
+      const lik = L[i * W + (k - i)]; if (!lik) continue;
+      for (let j = k; j <= jmax; j++) L[k * W + (j - k)] -= lik * L[i * W + (j - i)];
+    }
+  }
+  const u = Float64Array.from(F);
+  for (let i = 0; i < ndof; i++) { // forward: L^T y = F (L upper here = R, R^T R = K)
+    u[i] /= L[i * W];
+    const jmax = Math.min(ndof - 1, i + bw);
+    for (let j = i + 1; j <= jmax; j++) u[j] -= L[i * W + (j - i)] * u[i];
+  }
+  for (let i = ndof - 1; i >= 0; i--) {
+    const jmax = Math.min(ndof - 1, i + bw);
+    let s = u[i];
+    for (let j = i + 1; j <= jmax; j++) s -= L[i * W + (j - i)] * u[j];
+    u[i] = s / L[i * W];
+  }
+  // reactions
+  const react = new Float64Array(ndof);
+  for (const d of fixed.keys()) react[d] = -P * u[d];
+  // element-centre moments, then nodal values by bilinear interpolation / linear extrapolation to edges
+  const ne = nx * ny, Cx = new Float64Array(ne), Cy = new Float64Array(ne), Cxy = new Float64Array(ne);
+  const B0 = Bb(0, 0);
+  for (let ex = 0; ex < nx; ex++) for (let ey = 0; ey < ny; ey++) {
+    const e = enodes(ex, ey), kap = [0, 0, 0];
+    for (let p = 0; p < 3; p++) for (let m = 0; m < 4; m++) for (let c = 0; c < 3; c++) kap[p] += B0[p][3 * m + c] * u[3 * e[m] + c];
+    const id = ex * ny + ey;
+    Cx[id] = Db[0][0] * kap[0] + Db[0][1] * kap[1]; Cy[id] = Db[1][0] * kap[0] + Db[1][1] * kap[1]; Cxy[id] = Db[2][2] * kap[2];
+  }
+  const wts = (i, n) => n === 1 ? [[0, 1]] : i === 0 ? [[0, 1.5], [1, -0.5]] : i === n ? [[n - 1, 1.5], [n - 2, -0.5]] : [[i - 1, 0.5], [i, 0.5]];
+  const Mx = new Float64Array(nn), My = new Float64Array(nn), Mxy = new Float64Array(nn);
+  for (let i = 0; i < nnx; i++) for (let j = 0; j < nny; j++) {
+    const n = nid(i, j);
+    for (const [ex, wx] of wts(i, nx)) for (const [ey, wy] of wts(j, ny)) {
+      const id = ex * ny + ey, f = wx * wy; Mx[n] += f * Cx[id]; My[n] += f * Cy[id]; Mxy[n] += f * Cxy[id];
+    }
+  }
+  const w = new Float64Array(nn), M1 = new Float64Array(nn);
+  let wmax = 0, mmax = 0, wAt = 0, mAt = 0;
+  for (let n = 0; n < nn; n++) {
+    w[n] = u[3 * n];
+    const c = (Mx[n] + My[n]) / 2, r = Math.hypot((Mx[n] - My[n]) / 2, Mxy[n]);
+    const m = Math.abs(c + r) > Math.abs(c - r) ? c + r : c - r; M1[n] = m;
+    if (Math.abs(w[n]) > Math.abs(wmax)) { wmax = w[n]; wAt = n; }
+    if (Math.abs(m) > Math.abs(mmax)) { mmax = m; mAt = n; }
+  }
+  const coord = n => jFast ? [Math.floor(n / nny) * hx, (n % nny) * hy] : [(n % nnx) * hx, Math.floor(n / nnx) * hy];
+  let Fz = 0; for (let n = 0; n < nn; n++) Fz += F[3 * n];
+  let Rz = 0; for (let n = 0; n < nn; n++) Rz += react[3 * n];
+  const edgeR = {};
+  for (const side of ['bottom', 'top', 'left', 'right']) {
+    const nodes = edgeNodes[side], h = (side === 'bottom' || side === 'top') ? hx : hy;
+    let tot = 0, peak = 0, mpeak = 0; const mc = side === 'bottom' || side === 'top' ? 1 : 2;
+    nodes.forEach((n, k) => {
+      const trib = (k === 0 || k === nodes.length - 1) ? h / 2 : h;
+      tot += react[3 * n];
+      if (k > 0 && k < nodes.length - 1) { peak = Math.max(peak, Math.abs(react[3 * n]) / trib); mpeak = Math.max(mpeak, Math.abs(react[3 * n + (mc === 1 ? 2 : 1)]) / trib); }
+    });
+    edgeR[side] = {total: tot, peak, mpeak};
+  }
+  return {a, b, nx, ny, nnx, nny, hx, hy, t, D, w, Mx, My, Mxy, M1, wmax, mmax, wAt: coord(wAt), mAt: coord(mAt), nid, Fz, Rz, edgeR, ndof, bw, edgeNodes};
+}
+
+
+// ---------- Core engineering calculations (no DOM) ----------
+const G_ACC = 9.81;
+const GLASS_DENSITY = 2500; // kg/m3
+const NOMINALS = [4, 5, 6, 8, 10, 12, 15, 19, 25];
+// Minimum thickness from SANS 50572 / EN 572-2 tolerances
+const MIN_THK = {3: 2.8, 4: 3.8, 5: 4.8, 6: 5.8, 8: 7.7, 10: 9.7, 12: 11.7, 15: 14.5, 19: 18.0, 25: 24.0};
+const minThk = t => MIN_THK[t] ?? t;
+const GLASS = {
+  AN: {name: 'Annealed float', fbk: 45, short: 'AN'},
+  HS: {name: 'Heat-strengthened', fbk: 70, short: 'HS'},
+  FT: {name: 'Toughened (heat-soaked)', fbk: 120, short: 'FT'}
+};
+const HOURS_50Y = 50 * 365 * 24;
+
+const fmt = (v, d = 2) => (v === undefined || v === null || !isFinite(v)) ? '–' : Number(v).toFixed(d);
+const fmt0 = v => fmt(v, 0);
+
+function kmod(hours) { return Math.min(1, 0.663 * Math.pow(hours, -1 / 16)); }
+
+// Design strength, EN 16612 form: f_g,d = kmod·ksp·fg,k/γM,A + kv·(fb,k − fg,k)/γM,v
+function designStrength(c, hours) {
+  const g = GLASS[c.glass];
+  const km = kmod(hours);
+  if (c.strengthMode === 'custom') {
+    const kmPerm = kmod(HOURS_50Y);
+    const f = c.fCustom * (km / kmPerm);
+    return {f, km, text: `User design stress ${fmt(c.fCustom)} MPa (permanent). Scaled by kmod(${fmt0(hours)} h)/kmod(50 yr) = ${fmt(km, 3)}/${fmt(kmPerm, 3)} → f = ${fmt(f)} MPa`};
+  }
+  const fgk = 45, gMA = 1.8, gMv = 1.2, ksp = 1.0, kv = 1.0;
+  const base = km * ksp * fgk / gMA;
+  const pre = c.glass === 'AN' ? 0 : kv * (g.fbk - fgk) / gMv;
+  const f = base + pre;
+  const text = c.glass === 'AN'
+    ? `kmod = 0.663 × t^(−1/16) = 0.663 × ${fmt0(hours)}^(−0.0625) = ${fmt(km, 3)};  f = kmod·ksp·fg,k/γM,A = ${fmt(km, 3)} × 1.0 × 45 / 1.8 = ${fmt(f)} MPa`
+    : `kmod = 0.663 × ${fmt0(hours)}^(−0.0625) = ${fmt(km, 3)};  f = ${fmt(km, 3)} × 1.0 × 45/1.8 + 1.0 × (${g.fbk} − 45)/1.2 = ${fmt(base)} + ${fmt(pre)} = ${fmt(f)} MPa`;
+  return {f, km, text};
+}
+
+// Effective thickness of a laminate (EN 16612 / prEN 13474-style, shear transfer coefficient ω)
+function effThk(h, ti, omega) {
+  const n = h.length;
+  if (!n) return {hw: 0, hs: 0, z: [], hsi: [], total: 0};
+  const total = h.reduce((s, v) => s + v, 0) + (n - 1) * ti;
+  let cur = 0; const z = [];
+  for (let i = 0; i < n; i++) { z.push(cur + h[i] / 2 - total / 2); cur += h[i] + ti; }
+  const s3 = h.reduce((s, v) => s + v ** 3, 0);
+  const sz = h.reduce((s, v, i) => s + v * z[i] ** 2, 0);
+  const hw3 = s3 + 12 * omega * sz;
+  const hw = Math.cbrt(hw3);
+  const hsi = h.map((v, i) => Math.sqrt(hw3 / (v + 2 * omega * Math.abs(z[i]))));
+  const hs = Math.min(...hsi);
+  const course = Math.sqrt(h.reduce((s, v) => s + v * v, 0));
+  return {hw, hs, z, hsi, total, s3, sz, hw3, course, omega};
+}
+
+// Roark Table 11.4 coefficients (ν = 0.3)
+const ROARK = {
+  '1a': {name: 'Case 1a – all edges simply supported, uniform load', r: [1, 1.2, 1.4, 1.6, 1.8, 2, 3, 4, 5, 1e9], b: [.2874, .3762, .4530, .5172, .5688, .6102, .7134, .7410, .7476, .75], a: [.0444, .0616, .0770, .0906, .1017, .1110, .1335, .1400, .1417, .1421]},
+  '1d': {name: 'Case 1d – all edges simply supported, load increasing along length a', r: [1, 1.5, 2, 2.5, 3, 3.5, 4], b: [.16, .26, .34, .38, .43, .47, .49], a: [.022, .043, .060, .070, .078, .086, .091]},
+  '2a': {name: 'Case 2a – three edges simply supported, one edge b free, uniform load', r: [0.5, 0.667, 1, 1.5, 2, 4], b: [.36, .45, .67, .77, .79, .80], a: [.080, .106, .140, .160, .165, .167]},
+  '2d': {name: 'Case 2d – three edges simply supported, one edge b free, load increasing along a (zero at free edge)', r: [0.5, 0.667, 1, 1.5, 2, 2.5, 3, 3.5, 4], b: [.11, .16, .20, .28, .32, .35, .36, .37, .37], a: [.026, .033, .040, .050, .058, .064, .067, .069, .070]},
+  '1e': {name: 'Case 1e – all edges simply supported, load increasing along width b', r: [1, 1.5, 2, 2.5, 3, 3.5, 4], b: [.16, .26, .32, .35, .37, .38, .38], a: [.022, .042, .056, .063, .067, .069, .070]}
+};
+function roarkCoef(cs, ratio) {
+  const T = ROARK[cs]; let r = ratio, note = '';
+  if (r > T.r[T.r.length - 1]) { note = ' (beyond table – last value used)'; r = T.r[T.r.length - 1]; }
+  if (r < T.r[0]) { note = ' (below table – first value used)'; r = T.r[0]; }
+  let i = 0; while (i < T.r.length - 2 && r > T.r[i + 1]) i++;
+  const f = (r - T.r[i]) / (T.r[i + 1] - T.r[i]);
+  const lerp = arr => arr[i] + f * (arr[i + 1] - arr[i]);
+  const beta = lerp(T.b), alpha = lerp(T.a);
+  const rhi = T.r[i + 1] > 1e8 ? '∞' : T.r[i + 1];
+  return {beta, alpha, text: `${T.name}: a/b = ${fmt(ratio, 3)}, interpolating between a/b = ${T.r[i]} (β ${T.b[i]}, α ${T.a[i]}) and ${rhi} (β ${T.b[i + 1]}, α ${T.a[i + 1]}) → β = ${fmt(beta, 4)}, α = ${fmt(alpha, 4)}${note}`};
+}
+
+const rhoOf = c => c.water === 'sea' ? 1040 : c.water === 'custom' ? c.rho : 1000;
+const pAt = (c, depthMm) => rhoOf(c) * G_ACC * Math.max(0, depthMm) * 1e-9; // MPa
+
+// Build the analysis panels for a calculator type
+function buildPanels(type, c) {
+  const rho = rhoOf(c), cov = c.cover;
+  const edgesFrom = (def) => ({bottom: c.eBottom || def.bottom, top: c.eTop || def.top, left: c.eLeft || def.left, right: c.eRight || def.right});
+  if (type === 'vertical') {
+    const glassW = c.width + 2 * cov, glassH = c.height + 2 * cov;
+    const a = c.width + cov, b = c.height + cov; // support lines at mid-bearing
+    const topSL = b; // top support line elevation above bottom support line
+    const normal = topSL + cov / 2 + c.normAbove; // water surface above bottom support line
+    const over = c.overflowOn ? topSL + cov / 2 + c.ovAbove : -Infinity;
+    const governing = over > normal ? 'overflow' : 'normal';
+    const hw = Math.max(normal, over) + (c.extraHead || 0);
+    return [{id: 'win', name: 'Underwater window', a, b, glassW, glassH, edges: edgesFrom({bottom: 'S', top: 'S', left: 'S', right: 'S'}),
+      hw, governing, normalHw: normal, overHw: over, q: (x, y) => pAt(c, hw - y), scale: () => 1, kind: 'hydro',
+      qTop: pAt(c, hw - b), qBot: pAt(c, hw), spanShort: Math.min(a, b), spanLabel: 'shorter support span'}];
+  }
+  if (type === 'flat') {
+    const a = c.length + cov, b = c.width + cov;
+    const depth = c.depth + (c.overflowOn ? c.ovRise : 0) + (c.extraHead || 0);
+    const qw = pAt(c, depth), qi = (c.imposed || 0) * 1e-3;
+    const sw = t => c.selfWeight ? GLASS_DENSITY * G_ACC * t * 1e-9 : 0;
+    return [{id: 'floor', name: 'Horizontal window', a, b, glassW: c.length + 2 * cov, glassH: c.width + 2 * cov, edges: edgesFrom({bottom: 'S', top: 'S', left: 'S', right: 'S'}),
+      depth, qw, qi, sw, q: () => 1, scale: t => qw + qi + sw(t), kind: 'uniform', spanShort: Math.min(a, b), spanLabel: 'shorter support span'}];
+  }
+  if (type === 'rimflow') {
+    const cant = c.support === 'cant';
+    const a = cant ? c.length : c.length + cov;
+    const b = cant ? c.freeH : c.freeH + cov / 2; // from bottom support line to free top edge
+    const hw = b + c.weir + (c.extraHead || 0);
+    const def = cant ? {bottom: 'C', top: 'F', left: 'F', right: 'F'} : {bottom: 'C', top: 'F', left: 'S', right: 'S'};
+    return [{id: 'rim', name: 'Rim-flow glass', a, b, glassW: cant ? c.length : c.length + 2 * cov, glassH: null, edges: edgesFrom(def),
+      hw, q: (x, y) => pAt(c, hw - y), scale: () => 1, kind: 'hydro', qTop: pAt(c, hw - b), qBot: pAt(c, hw), spanShort: c.defSpan === 'length' ? a : b, spanLabel: c.defSpan === 'length' ? 'panel length' : 'glass height above the support line', cant}];
+  }
+  if (type === 'tank') {
+    const top = c.braced ? 'S' : 'F';
+    const hw = Math.min(c.Hw, c.H);
+    const sw = t => GLASS_DENSITY * G_ACC * t * 1e-9;
+    const qb = pAt(c, hw);
+    const side = (id, name, len) => ({id, name, a: len, b: c.H, glassW: len, glassH: c.H, edges: {bottom: 'S', top, left: 'S', right: 'S'}, hw,
+      q: (x, y) => pAt(c, hw - y), scale: () => 1, kind: 'hydro', qTop: pAt(c, hw - c.H), qBot: qb, spanShort: c.braced ? Math.min(len, c.H) : c.H, spanLabel: c.braced ? 'shorter span' : 'glass height'});
+    return [side('front', 'Front / back panel', c.L), side('end', 'End panel', c.W),
+      {id: 'base', name: 'Base panel', a: c.L, b: c.W, glassW: c.L, glassH: c.W, edges: {bottom: 'S', top: 'S', left: 'S', right: 'S'}, qw: qb, qi: 0, sw, depth: hw,
+        q: () => 1, scale: t => qb + sw(t), kind: 'uniform', spanShort: Math.min(c.L, c.W), spanLabel: 'shorter span', bedded: c.base === 'bedded'}];
+  }
+  return [];
+}
+
+function meshFor(a, b, fine = 1) {
+  const ratio = Math.max(a, b) / Math.min(a, b);
+  let ns = ratio <= 3 ? 26 : Math.max(12, Math.min(26, Math.floor(Math.sqrt(2600 / ratio))));
+  ns = Math.max(6, Math.round(ns * fine));
+  const nl = Math.min(Math.round(ns * ratio), Math.round(100 * fine));
+  return a >= b ? {nx: nl, ny: ns} : {nx: ns, ny: nl};
+}
+
+const feaCache = new Map();
+function runFEA(p, c, fine = 1) {
+  const m = meshFor(p.a, p.b, fine);
+  const tref = Math.min(p.a, p.b) / 100;
+  const key = JSON.stringify([p.a, p.b, p.edges, p.kind, p.hw, p.qBot, m, c.nu, fine]);
+  if (feaCache.has(key)) return feaCache.get(key);
+  const t0 = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  const r = plateFEA({a: p.a, b: p.b, nx: m.nx, ny: m.ny, E: c.E, nu: c.nu, t: tref, edges: p.edges, q: p.q});
+  r.tref = tref; r.ms = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0;
+  if (feaCache.size > 40) feaCache.clear();
+  feaCache.set(key, r);
+  return r;
+}
+
+// Evaluate one make-up on one panel.
+// plies = structural plies (ply 1 on the water side). sacT = extra sacrificial ply (0 = none),
+// added on the water side ('water') or the dry side ('dry') over and above the structural make-up.
+function evalMakeup(p, fea, c, plies, sacT, sacPos, fPerm, fTemp) {
+  const ti = c.inter;
+  const nomT = pl => pl.reduce((s, v) => s + v, 0) + (pl.length - 1) * (pl.length > 1 ? ti : 0);
+  const byRatio = p.spanShort / (c.defRatio > 0 ? c.defRatio : 250), byAbs = c.defAbs > 0 ? c.defAbs : null;
+  const limit = byAbs !== null ? byAbs : byRatio;
+  const topWs = p.edges.top === 'F' ? fea.edgeNodes.top.map(n => Math.abs(fea.w[n])) : null;
+  // stresses/deflections for a set of working plies (min thk) carrying the load of a pane of total nominal thickness tLoad
+  const calc = (hmin, tLoad, omega) => {
+    const sc = p.scale(tLoad), M = Math.abs(fea.mmax) * sc, Md = M * c.gF;
+    const eff = effThk(hmin, hmin.length > 1 ? ti : 0, omega);
+    const k = Math.pow(fea.tref / eff.hw, 3);
+    return {eff, sc, M, Md, s: 6 * Md / eff.hs ** 2, w: Math.abs(fea.wmax) * sc * k,
+      topVar: topWs ? (Math.max(...topWs) - Math.min(...topWs)) * sc * k : null};
+  };
+  const okTop = v => v === null || !c.topLimitOn || v <= c.topLimit;
+  const mt = v => c.nominalThk ? v : minThk(v);
+  const hmin = plies.map(mt), tNom = nomT(plies);
+  const base = calc(hmin, tNom, c.omega);
+  const res = {plies, hmin, ti: plies.length > 1 ? ti : 0, tNom, tFull: tNom, sc: base.sc, M: base.M, Md: base.Md, limit, byRatio, byAbs,
+    limitBy: byAbs !== null ? 'abs' : 'ratio', halfT: tNom / 2, intact: base.eff, sIntact: base.s, wIntact: base.w, fPerm, fTemp,
+    weight: GLASS_DENSITY * tNom / 1000, topVarIntact: base.topVar};
+  res.largeDefl = base.w > tNom / 2;
+  // post-breakage helper: worst single structural ply broken, remaining plies (incl. any sacrificial) at the temporary strength
+  const worstBreak = (workIdx, all, tLoad) => {
+    let worst = null;
+    workIdx.forEach(k => {
+      const rem = all.filter((_, i) => i !== k);
+      const r = calc(rem, tLoad, 0);
+      if (!worst || r.s > worst.s) worst = {k, ...r};
+    });
+    return worst;
+  };
+  // Without a sacrificial ply: all structural plies at the permanent strength, plus a post-breakage check
+  const B = {s: base.s, w: base.w, topVar: base.topVar, okS: base.s <= fPerm, okW: base.w <= limit, okTop: okTop(base.topVar)};
+  if (plies.length >= 2) { B.post = worstBreak(hmin.map((_, i) => i), hmin, tNom); B.okPost = B.post.s <= fTemp; }
+  else { B.post = null; B.okPost = !!c.allowMono; B.monoAllowed = !!c.allowMono; }
+  B.ok = B.okS && B.okW && B.okTop && B.okPost;
+  res.B = B;
+  // With a sacrificial ply added over and above the structural plies
+  if (sacT > 0) {
+    const full = sacPos === 'water' ? [sacT, ...plies] : [...plies, sacT];
+    const sacIdx = sacPos === 'water' ? 0 : full.length - 1;
+    const fmin = full.map(mt), tF = nomT(full);
+    const intact = calc(fmin, tF, c.omega);          // everything intact – stiffer and stronger
+    const broken = calc(hmin, tF, 0);                 // sacrificial ply broken: structural plies alone, permanent load
+    const structIdx = fmin.map((_, i) => i).filter(i => i !== sacIdx);
+    const post = plies.length >= 1 ? worstBreak(structIdx, fmin, tF) : null; // a structural ply breaks, sacrificial still intact
+    const A = {full, sacIdx, sacT, tNom: tF, weight: GLASS_DENSITY * tF / 1000, intact, broken, post,
+      s: broken.s, w: broken.w, topVar: broken.topVar, sIntact: intact.s, wIntact: intact.w, eff: broken.eff};
+    A.okS = broken.s <= fPerm; A.okW = broken.w <= limit; A.okTop = okTop(broken.topVar);
+    A.okPost = post ? post.s <= fTemp : false;
+    A.mono = plies.length < 2;
+    A.warnHalf = broken.w > tF / 2;
+    A.ok = A.okS && A.okW && A.okTop && A.okPost && (!A.mono || !!c.allowMono);
+    res.A = A; res.tFull = tF;
+  } else res.A = null;
+  return res;
+}
+
+// Edge cover / embedment
+function frameDesign(p, fea, c, res) {
+  const out = [];
+  for (const side of ['bottom', 'top', 'left', 'right']) {
+    const e = p.edges[side]; if (e === 'F') continue;
+    const R = fea.edgeR[side].peak * res.sc * c.gF;     // N/mm design
+    const L = (side === 'bottom' || side === 'top') ? p.a : p.b;
+    const pull = Math.PI ** 2 * res.wIntact ** 2 / (8 * L);
+    if (e === 'S') {
+      const bear = R / c.pAllow;
+      const req = Math.max(c.cMin, bear + 5, pull + 15);
+      out.push({side, type: 'S', R, bear, pull, req, ok: c.cover >= req - 1e-9, rebate: c.cover + c.clear, rebateW: res.tFull + 2 * c.sideClear});
+    } else {
+      const M = fea.edgeR[side].mpeak * res.sc * c.gF;  // N·mm/mm
+      const V = R, pp = c.pPad;
+      const Dc = (0.875 * V + Math.sqrt((0.875 * V) ** 2 + 4 * 0.1875 * pp * M)) / (2 * 0.1875 * pp);
+      const D = Math.max(c.Dmin, Dc);
+      const Ftop = (M + 0.875 * V * D) / (0.75 * D), bearing = Ftop / (0.25 * D);
+      out.push({side, type: 'C', R, M, V, Dc, D, Ftop, bearing, ok: true, chanW: res.tFull + 2 * c.padT});
+    }
+  }
+  return out;
+}
+
+// Hand calculation (Roark / beam strip) for comparison with FEA
+function handCalc(p, c, res) {
+  const steps = []; let M = null, w = null, method = '';
+  const tW = res.intact.hw;
+  if (p.kind === 'uniform' && ['S'].every(() => Object.values(p.edges).every(e => e === 'S'))) {
+    const A = Math.max(p.a, p.b), B = Math.min(p.a, p.b), q = p.scale(res.tNom);
+    const k = roarkCoef('1a', A / B);
+    steps.push(k.text);
+    const sigK = k.beta * q * B * B; // σ·t² = βqb²
+    M = sigK / 6; w = k.alpha * q * B ** 4 / (c.E * tW ** 3);
+    steps.push(`σ·t² = β·q·b² = ${fmt(k.beta, 4)} × ${fmt(q, 6)} × ${fmt0(B)}² = ${fmt(sigK, 0)} N  →  M = σt²/6 = ${fmt(M, 1)} N·mm/mm`);
+    steps.push(`y = α·q·b⁴/(E·t³) = ${fmt(k.alpha, 4)} × ${fmt(q, 6)} × ${fmt0(B)}⁴ / (${c.E} × ${fmt(tW, 2)}³) = ${fmt(w, 2)} mm`);
+    method = 'Roark Table 11.4 case 1a';
+  } else if (p.kind === 'hydro' && Object.values(p.edges).every(e => e === 'S')) {
+    const A = Math.max(p.a, p.b), B = Math.min(p.a, p.b);
+    const qT = Math.max(0, p.qTop), dq = p.qBot - qT;
+    const cs = p.b <= p.a ? '1e' : '1d';
+    const k1 = roarkCoef('1a', A / B), k2 = roarkCoef(cs, A / B);
+    if (qT > 0) steps.push(`Trapezoidal water load split into a uniform part q₀ = ${fmt(qT * 1000, 3)} kPa (pressure at the top support) plus a triangular part Δq = ${fmt(dq * 1000, 3)} kPa. Maxima of the two parts are added (conservative).`);
+    else steps.push(`Water surface is at or below the top support. Taken as a full-height triangular load with q = ${fmt(p.qBot * 1000, 3)} kPa at the bottom (conservative).`);
+    steps.push(k1.text); steps.push(k2.text);
+    const sigK = (k1.beta * qT + k2.beta * dq) * B * B;
+    M = sigK / 6; w = (k1.alpha * qT + k2.alpha * dq) * B ** 4 / (c.E * tW ** 3);
+    steps.push(`σ·t² = (β₁·q₀ + β₂·Δq)·b² = (${fmt(k1.beta, 4)} × ${fmt(qT, 6)} + ${fmt(k2.beta, 4)} × ${fmt(dq, 6)}) × ${fmt0(B)}² = ${fmt(sigK, 0)} N  →  M = ${fmt(M, 1)} N·mm/mm`);
+    steps.push(`y = (α₁·q₀ + α₂·Δq)·b⁴/(E·t³) = ${fmt(w, 2)} mm  (t = ${fmt(tW, 2)} mm effective)`);
+    method = `Roark Table 11.4 cases 1a + ${cs}`;
+  } else if (p.kind === 'hydro' && p.edges.top === 'F' && p.edges.bottom === 'S' && p.edges.left === 'S' && p.edges.right === 'S') {
+    const bf = p.a, aa = p.b, qT = Math.max(0, p.qTop), dq = p.qBot - qT;
+    const k1 = roarkCoef('2a', aa / bf), k2 = roarkCoef('2d', aa / bf);
+    steps.push(`Free top edge of length b = ${fmt0(bf)} mm, height a = ${fmt0(aa)} mm. ` + (qT > 0 ? `Uniform part q₀ = ${fmt(qT * 1000, 3)} kPa plus triangular part Δq = ${fmt(dq * 1000, 3)} kPa.` : `Taken as a triangular load, zero at the free edge, q = ${fmt(p.qBot * 1000, 3)} kPa at the bottom (conservative if the water is lower).`));
+    if (qT > 0) steps.push(k1.text);
+    steps.push(k2.text);
+    const sigK = (k1.beta * qT + k2.beta * dq) * bf * bf;
+    M = sigK / 6; w = (k1.alpha * qT + k2.alpha * dq) * bf ** 4 / (c.E * tW ** 3);
+    steps.push(`σ·t² = (β₁·q₀ + β₂·Δq)·b² = ${fmt(sigK, 0)} N  →  M = ${fmt(M, 1)} N·mm/mm;  y = (α₁·q₀ + α₂·Δq)·b⁴/(E·t³) = ${fmt(w, 2)} mm`);
+    method = 'Roark Table 11.4 cases 2a + 2d';
+  } else if (p.kind === 'hydro' && p.edges.bottom === 'C') {
+    const h = p.b, qT = Math.max(0, p.qTop), dq = p.qBot - qT;
+    M = qT * h * h / 2 + dq * h * h / 6;
+    steps.push(`Cantilever strip of height h = ${fmt0(h)} mm spanning from the bottom support to the free top edge. Base moment per mm run: M = q₀·h²/2 + Δq·h²/6 = ${fmt(qT, 6)} × ${fmt0(h)}²/2 + ${fmt(dq, 6)} × ${fmt0(h)}²/6 = ${fmt(M, 1)} N·mm/mm`);
+    const D = c.E * tW ** 3 / 12;
+    w = (qT * h ** 4 / 8 + dq * h ** 4 / 30) / D;
+    steps.push(`Tip deflection: y = (q₀h⁴/8 + Δq·h⁴/30)/(E·t³/12) = ${fmt(w, 2)} mm. This strip ignores help from any side supports, so for three-edge support it is an upper bound.`);
+    method = 'Cantilever strip (course rim-flow method)';
+  }
+  if (M !== null) {
+    const Md = M * c.gF; const s = 6 * Md / res.intact.hs ** 2;
+    steps.push(`Design stress σ = 6·γF·M/t² = 6 × ${fmt(c.gF, 2)} × ${fmt(M, 1)} / ${fmt(res.intact.hs, 2)}² = ${fmt(s, 2)} MPa`);
+    return {method, steps, M, w, s, treq: Math.sqrt(6 * Md / res.fPerm)};
+  }
+  return {method: 'No closed-form case for these supports – FEA only', steps: [], M: null};
+}
+
+// Nick Wright / SAGI "Underwater Glazing 2024" course method: t = √(β·q·b²/f), layered factor √Σt²
+function courseCalc(type, p, c, plies, fPerm) {
+  const rho = rhoOf(c), f = c.glass === 'AN' ? 7.0 : fPerm, steps = [];
+  const P = d => rho * G_ACC * d / 1000; // Pa, d in mm
+  const sq = v => fmt(v, 3);
+  let beta = null, q = null, b = null, note = '', pilk = null;
+  steps.push(`Course design stress f = ${fmt(f, 2)} MPa${c.glass === 'AN' ? ' (course value for annealed glass under water)' : ' (calculator value; the course example is annealed only)'}. Spans are the visible glass sizes; nominal ply thicknesses are used.`);
+  if (type === 'vertical') {
+    const H = c.height, Wd = c.width, above = Math.max(c.normAbove, c.overflowOn ? c.ovAbove : -Infinity);
+    const d = above + H; q = P(d); b = Math.min(H, Wd); const A = Math.max(H, Wd);
+    const k = roarkCoef(Wd >= H ? '1e' : '1d', A / b); beta = k.beta;
+    steps.push(`Pressure at the bottom of the glass: P = ρ·g·h = ${rho} × 9.81 × ${sq(d / 1000)} = ${fmt0(q)} Pa (${fmt0(above)} mm of water above the top + ${fmt0(H)} mm glass height).`);
+    steps.push(`Course approach: the whole pressure is taken as a triangle (zero at the top). ${k.text}`);
+    const r = H / Wd, Wp = 1.5 * 9.807 * H * H, Af = 1 - (5 / 6) * r * r / (r ** 4 + 1), Bf = ((r * r / 4) + 1) * r / (r ** 4 + 1);
+    pilk = Math.sqrt(Wp / (f * 1000) * Af * Bf);
+    steps.push(`Course spreadsheet formula (Pilkington type): r = h/w = ${fmt(r, 3)}, W = 1.5 × 9.807 × h² = ${fmt0(Wp)}, A = 1 − (5/6)·r²/(r⁴+1) = ${fmt(Af, 3)}, B = (r²/4 + 1)·r/(r⁴+1) = ${fmt(Bf, 3)}, t = √(W/f·A·B) = √(${fmt0(Wp)} / ${fmt0(f * 1000)} × ${fmt(Af, 3)} × ${fmt(Bf, 3)}) = ${fmt(pilk, 2)} mm. This formula uses the glass height only, not the water above the top.`);
+  } else if (type === 'flat') {
+    const d = c.depth + (c.overflowOn ? c.ovRise : 0), tS = plies.reduce((s, v) => s + v, 0);
+    const qw = P(d), sw = c.selfWeight ? tS * 2.5 * 9.81 : 0, qi = (c.imposed || 0) * 1000;
+    q = qw + sw + qi; b = Math.min(c.length, c.width); const A = Math.max(c.length, c.width);
+    const k = roarkCoef('1a', A / b); beta = k.beta;
+    steps.push(`Water pressure P = ${rho} × 9.81 × ${sq(d / 1000)} = ${fmt0(qw)} Pa. Self weight = ${tS} × 2.5 × 9.81 = ${fmt(sw, 2)} Pa${qi ? `. Imposed ${fmt0(qi)} Pa` : ''}. Total q = ${fmt(q, 2)} Pa.`);
+    steps.push(k.text);
+    if (Math.abs(A / b - 1.25) < 0.05) note = 'The course notes use β = 0.453 for a/b = 1.25, which is the Roark value for a/b = 1.4; at 1.25 the table gives the β above.';
+  } else if (type === 'rimflow') {
+    const d = c.freeH + c.weir; q = P(d); b = c.freeH; beta = 0.866;
+    steps.push(`Water pressure P = ${rho} × 9.81 × ${sq(d / 1000)} = ${fmt0(q)} Pa, applied as a uniform load as in the course (glass height ${fmt0(c.freeH)} mm + ${fmt0(c.weir)} mm over the weir).`);
+    steps.push(`β = 0.866, the value the course uses for the 10 m × 0.8 m example (a/b = 12.5). Here a/b = ${fmt(c.length / c.freeH, 2)}. Its source is not given in the notes, and it is lower than a pure cantilever (β = 3 for a uniform load), so it relies on the end supports.`);
+    note = 'The course example used 600 mm of water on 800 mm glass. Water flowing over the top means the full glass height is under water, which the calculator uses.';
+  } else if (type === 'tank') {
+    const hw = Math.min(c.Hw, c.H);
+    if (p.id === 'base') {
+      const tS = plies.reduce((s, v) => s + v, 0), sw = tS * 2.5 * 9.81; q = P(hw) + sw; b = Math.min(c.L, c.W);
+      const k = roarkCoef('1a', Math.max(c.L, c.W) / b); beta = k.beta;
+      steps.push(`Base: water ${fmt0(P(hw))} Pa + self weight ${fmt(sw, 1)} Pa = ${fmt(q, 1)} Pa uniform. ${k.text}`);
+    } else {
+      q = P(hw); const L = p.a, H = c.H;
+      steps.push(`Pressure at the bottom: P = ${rho} × 9.81 × ${sq(hw / 1000)} = ${fmt0(q)} Pa, triangular (the course has no tank example, so its Roark approach is applied).`);
+      if (c.braced) { b = Math.min(L, H); const k = roarkCoef(L >= H ? '1e' : '1d', Math.max(L, H) / b); beta = k.beta; steps.push(k.text); }
+      else { b = L; const k = roarkCoef('2d', H / L); beta = k.beta; steps.push(`Open top (free edge of length ${fmt0(L)} mm). ${k.text}`); }
+    }
+  }
+  const treq = Math.sqrt(beta * q * 1e-6 * b * b / f);
+  steps.push(`t = √(β·q·b²/f) = √(${fmt(beta, 4)} × ${fmt0(q)} × ${sq(b / 1000)}² / ${fmt0(f * 1e6)}) = ${fmt(treq, 2)} mm.`);
+  const tGov = Math.max(treq, pilk || 0);
+  if (pilk) steps.push(`Governing course thickness = larger of the two = ${fmt(tGov, 2)} mm (the course selects the laminate against the spreadsheet value).`);
+  const eqT = pl => Math.sqrt(pl.reduce((s, v) => s + v * v, 0));
+  const eqNow = eqT(plies);
+  steps.push(`Layered factor (course, slippage): equivalent t = √Σt² = √(${plies.map(v => v + '²').join(' + ')}) = ${fmt(eqNow, 2)} mm ${eqNow >= tGov ? '≥' : '<'} ${fmt(tGov, 2)} mm → ${eqNow >= tGov ? 'passes' : 'fails'} the course check.`);
+  const opts = [];
+  for (const t of [6, 8, 10, 12, 15, 19, 25]) for (let n = 2; n <= 5; n++) if (Math.sqrt(n) * t >= tGov) { opts.push({plies: Array(n).fill(t), tot: n * t, eq: Math.sqrt(n) * t}); break; }
+  opts.sort((x, y) => x.tot - y.tot || x.eq - y.eq);
+  return {f, beta, q, b, treq, pilk, tGov, note, steps, eqNow, ok: eqNow >= tGov, opts: opts.slice(0, 3)};
+}
+
+function candidateMakeups() {
+  const list = [], ts = [6, 8, 10, 12, 15, 19, 25];
+  for (const t of ts) list.push([t]);
+  for (let n = 2; n <= 5; n++) for (const t of ts) list.push(Array(n).fill(t));
+  return list;
+}
+
+function searchOptions(p, fea, c, fPerm, fTemp) {
+  const out = {A: [], B: []}, sacT = c.sacT > 0 ? c.sacT : 6;
+  for (const pl of candidateMakeups()) {
+    const r = evalMakeup(p, fea, c, pl, sacT, c.sacPos, fPerm, fTemp);
+    if (r.A && r.A.ok) out.A.push(r);
+    if (r.B.ok) out.B.push(r);
+  }
+  out.A.sort((x, y) => x.A.tNom - y.A.tNom); out.B.sort((x, y) => x.tNom - y.tNom);
+  out.A = out.A.slice(0, 5); out.B = out.B.slice(0, 5); out.sacT = sacT;
+  return out;
+}
+
+
+// ---------- Application: state, inputs, rendering, report, export ----------
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, ch => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[ch]));
+const todayISO = () => new Date().toISOString().slice(0, 10);
+
+const COMMON = {
+  water: 'fresh', rho: 1000, glass: 'AN', strengthMode: 'en', fCustom: 7.0, gF: 1.0, E: 70000, nu: 0.22,
+  interType: 'PVB', inter: 1.52, omega: 0, sacPos: 'dry', sacT: 6, defRatio: 250, defAbs: 0, repDays: 30,
+  cMin: 25, cover: 30, clear: 6, pAllow: 0.5, sideClear: 5, Dmin: 100, pPad: 1.0, padT: 10,
+  topLimitOn: false, topLimit: 0.5, allowMono: false, extraHead: 0, eBottom: '', eTop: '', eLeft: '', eRight: ''
+};
+const TYPES = {
+  vertical: {label: 'Vertical window', sub: 'Underwater, supported on all 4 edges',
+    d: {width: 1000, height: 800, normAbove: 600, overflowOn: true, ovAbove: 650, tile: 150, plies: [12, 12, 12], sacT: 6}},
+  flat: {label: 'Horizontal window', sub: '0° floor or roof glass under water',
+    d: {length: 1000, width: 800, depth: 600, overflowOn: false, ovRise: 100, imposed: 0, selfWeight: true, plies: [12, 12, 12], sacT: 6, sacPos: 'water'}},
+  rimflow: {label: 'Rim-flow edge', sub: 'Water flowing over the top edge',
+    d: {defSpan: 'height', length: 10000, freeH: 800, weir: 10, support: '3edge', glass: 'FT', topLimitOn: true, topLimit: 0.5, plies: [25, 25, 25], sacT: 10, sacPos: 'water'}},
+  tank: {label: 'Fish tank', sub: 'Aquarium front, ends and base',
+    d: {L: 1200, W: 500, H: 600, Hw: 560, braced: false, base: 'framed', allowMono: true, plies: [12], sacT: 0, cover: 0, cMin: 0}}
+};
+function freshState() {
+  const s = {v: 3, type: 'vertical', project: {project: 'Example – lounge viewing window', client: '', site: '', engineer: '', ref: 'PG-001', date: todayISO()}};
+  for (const k in TYPES) s[k] = JSON.parse(JSON.stringify({...COMMON, ...TYPES[k].d}));
+  return s;
+}
+let S = freshState();
+try { const saved = JSON.parse(localStorage.getItem('pgc-state') || 'null'); if (saved && saved.vertical && saved.v >= 3) S = mergeState(saved); } catch (e) { /* storage unavailable */ }
+function mergeState(x) {
+  const base = freshState();
+  const out = {v: 3, type: TYPES[x.type] ? x.type : 'vertical', project: {...base.project, ...(x.project || {})}};
+  for (const k in TYPES) { out[k] = {...base[k], ...(x[k] || {})}; }
+  return out;
+}
+const saveState = () => { try { localStorage.setItem('pgc-state', JSON.stringify(S)); } catch (e) { /* ignore */ } };
+
+// ---------- input schema ----------
+const N = (k, label, unit, o = {}) => ({k, label, unit, kind: 'num', ...o});
+const C = (k, label, o = {}) => ({k, label, kind: 'chk', ...o});
+const L = (k, label, opts, o = {}) => ({k, label, kind: 'sel', opts, ...o});
+const GEOM = {
+  vertical: [
+    N('width', 'Visible (daylight) width', 'mm'), N('height', 'Visible (daylight) height', 'mm'),
+    N('normAbove', 'Normal water level above top of glass', 'mm', {help: 'Negative when the water sits below the top of the glass, for example behind a tile band.'}),
+    C('overflowOn', 'Check the overflow or flood level as well'),
+    N('ovAbove', 'Overflow level above top of glass', 'mm', {show: c => c.overflowOn, help: 'Water flowing over the coping, a blocked overflow or a filling error.'}),
+    N('tile', 'Tile or coping band above the glass', 'mm', {help: 'Drawing only.'}),
+    N('extraHead', 'Extra head for swimmer push-off or surge', 'mm', {help: 'SANS 10137 §6.8.3.2: allow for swimmers or large animals where the top edge is below water.'}),
+    N('defRatio', 'Allowable deflection as span ÷', '', {id: '-defl', help: 'Default limit: span ÷ 250.'}),
+    N('defAbs', 'Allowable deflection override', 'mm', {id: '-defl', help: 'Leave at 0 to use span ÷ above. Type any value in mm to replace it.'})],
+  flat: [
+    N('length', 'Visible (daylight) length', 'mm'), N('width', 'Visible (daylight) width', 'mm'),
+    N('depth', 'Water depth above the glass', 'mm'),
+    C('overflowOn', 'Allow for the water level rising (overflow)'), N('ovRise', 'Extra rise in level', 'mm', {show: c => c.overflowOn}),
+    N('imposed', 'Imposed load on the glass', 'kPa', {help: 'For example people standing on a glass pool floor. 0 if not accessible.'}),
+    C('selfWeight', 'Include glass self weight'), N('extraHead', 'Extra head (surge, wave)', 'mm'),
+    N('defRatio', 'Allowable deflection as span ÷', '', {id: '-defl', help: 'Default limit: span ÷ 250.'}),
+    N('defAbs', 'Allowable deflection override', 'mm', {id: '-defl', help: 'Leave at 0 to use span ÷ above. Type any value in mm to replace it.'})],
+  rimflow: [
+    L('support', 'Support arrangement', [['3edge', '3 edges: bottom clamped in channel + both ends supported'], ['cant', '1 edge: bottom clamped in channel only (cantilever)']]),
+    N('length', 'Panel length', 'mm', {help: 'Between end supports (3-edge) or full panel length (1-edge).'}),
+    N('freeH', 'Glass height above the channel', 'mm'),
+    N('weir', 'Water depth flowing over the top edge', 'mm'),
+    N('defRatio', 'Allowable deflection as span ÷', '', {id: '-defl', help: 'Default limit: span ÷ 250.'}),
+    N('defAbs', 'Allowable deflection override', 'mm', {id: '-defl', help: 'Leave at 0 to use span ÷ above. Any value entered here replaces it. The results show the deflection at the design stress to help you choose.'}),
+    L('defSpan', 'Span used for span ÷', [['height', 'Glass height above the channel'], ['length', 'Panel length']]),
+    C('topLimitOn', 'Check even flow over the top edge'), N('topLimit', 'Allowed top-edge deflection variation', 'mm', {show: c => c.topLimitOn, help: 'A separate check from the pane deflection above. Course guidance: keep the change along the top edge below 0.5 mm so water flows evenly. With 3-edge support this is usually the deciding check.'}),
+    N('extraHead', 'Extra head (surge, wave)', 'mm')],
+  tank: [
+    N('L', 'Tank length (front glass)', 'mm'), N('W', 'Tank width (end glass)', 'mm'), N('H', 'Glass height', 'mm'),
+    N('Hw', 'Water height', 'mm'),
+    C('braced', 'Top edge braced (euro-brace or top frame)'),
+    L('base', 'Base support', [['framed', 'Base on a perimeter frame (4-edge support)'], ['bedded', 'Base fully bedded on a mat (perimeter result is conservative)']]),
+    C('allowMono', 'Allow monolithic glass (small domestic tanks, SANS 10137 §6.8.3.1)'),
+    N('defRatio', 'Allowable deflection as span ÷', '', {id: '-defl', help: 'Default limit: span ÷ 250.'}),
+    N('defAbs', 'Allowable deflection override', 'mm', {id: '-defl', help: 'Leave at 0 to use span ÷ above. Type any value in mm to replace it.'})]
+};
+const GROUPS = c => [
+  {id: 'water', title: 'Water', fields: [L('water', 'Water type', [['fresh', 'Fresh water 1 000 kg/m³'], ['sea', 'Sea water 1 040 kg/m³ (SANS 10137)'], ['custom', 'Other density']]), N('rho', 'Density', 'kg/m³', {show: c => c.water === 'custom'})]},
+  {id: 'glass', title: 'Glass and interlayer', fields: [
+    L('glass', 'Glass type', [['AN', 'Annealed float'], ['HS', 'Heat-strengthened'], ['FT', 'Toughened, heat-soak tested']]),
+    L('interType', 'Interlayer', [['PVB', 'PVB'], ['SGP', 'Ionoplast (SentryGlas type)'], ['EVA', 'EVA / other']]),
+    N('inter', 'Interlayer thickness', 'mm'),
+    N('omega', 'Shear transfer coefficient ω', '0–1', {help: '0 = plies act separately (PVB under sustained water load, Button & Pye). Use more than 0 only with interlayer data for long-term load at pool temperature.'})]},
+  {id: 'criteria', title: 'Design criteria', fields: [
+    L('strengthMode', 'Design strength', [['en', 'EN 16612 model, 50-year load'], ['custom', 'Enter my own value']]),
+    N('fCustom', 'Permanent design stress', 'MPa', {show: c => c.strengthMode === 'custom', help: 'Course method uses 7.0 MPa for annealed glass under water.'}),
+    C('nominalThk', 'Use nominal ply thickness (course method) instead of the SANS 50572 minimum'),
+    N('gF', 'Load factor γF on water load', '', {help: '1.0 follows the course and SANS 10137 working method; use 1.2–1.35 for a limit-state approach.'}),
+    N('repDays', 'Time to replace a broken ply', 'days', {help: 'Sets the load duration for the post-breakage check.'}),
+    N('E', 'Young’s modulus E', 'MPa'), N('nu', 'Poisson’s ratio ν', '')]},
+  {id: 'frame', title: 'Frame, edge cover and supports', fields: [
+    N('cover', 'Edge cover used (glass into frame)', 'mm', {show: () => S.type !== 'tank'}),
+    N('cMin', 'Minimum edge cover', 'mm', {show: () => S.type !== 'tank'}),
+    N('clear', 'Edge clearance (setting block)', 'mm', {show: () => S.type !== 'tank'}),
+    N('sideClear', 'Face clearance each side', 'mm', {show: () => S.type !== 'tank'}),
+    N('pAllow', 'Allowable bearing on gasket / tape', 'MPa', {show: () => S.type !== 'tank'}),
+    N('Dmin', 'Minimum embedment in a channel', 'mm', {show: () => S.type === 'rimflow'}),
+    N('pPad', 'Allowable bearing on channel pads / grout', 'MPa', {show: () => S.type === 'rimflow'}),
+    N('padT', 'Pad thickness each side', 'mm', {show: () => S.type === 'rimflow'}),
+    ...['eBottom', 'eTop', 'eLeft', 'eRight'].map(k => L(k, ({eBottom: 'Bottom edge', eTop: 'Top edge', eLeft: 'Left edge', eRight: 'Right edge'})[k],
+      [['', 'Default for this calculator'], ['S', 'Simply supported'], ['C', 'Clamped'], ['F', 'Free']], {show: () => S.type !== 'tank'}))]}
+];
+
+// ---------- picker ----------
+const ICONS = {
+  vertical: `<svg viewBox="0 0 96 72" aria-hidden="true"><rect x="4" y="4" width="88" height="64" rx="4" fill="var(--water-soft)"/><rect x="22" y="18" width="52" height="40" fill="var(--glass)" stroke="var(--glass-edge)" stroke-width="2"/><rect x="18" y="14" width="60" height="48" fill="none" stroke="var(--frame)" stroke-width="3"/><path d="M4 10h88" stroke="var(--water)" stroke-width="1.5" stroke-dasharray="4 3"/><path d="M80 20v38l10 0z" fill="var(--water)" opacity=".35"/></svg>`,
+  flat: `<svg viewBox="0 0 96 72" aria-hidden="true"><rect x="8" y="10" width="80" height="26" fill="var(--water-soft)"/><path d="M8 10h80" stroke="var(--water)" stroke-width="1.5"/><rect x="14" y="36" width="68" height="7" fill="var(--glass)" stroke="var(--glass-edge)" stroke-width="1.5"/><path d="M14 43l-4 8h10zM82 43l-4 8h10z" fill="var(--frame)"/><path d="M30 54h36" stroke="var(--muted)" stroke-width="1"/><path d="M48 14v18M44 28l4 4 4-4" stroke="var(--water)" stroke-width="1.5" fill="none"/></svg>`,
+  rimflow: `<svg viewBox="0 0 96 72" aria-hidden="true"><rect x="6" y="14" width="44" height="44" fill="var(--water-soft)"/><path d="M6 13h46q8 0 10 10t4 30" stroke="var(--water)" stroke-width="2" fill="none"/><rect x="46" y="12" width="6" height="52" fill="var(--glass)" stroke="var(--glass-edge)" stroke-width="1.5"/><path d="M38 52h22v14H38z" fill="var(--frame)" opacity=".55"/><rect x="62" y="56" width="26" height="10" fill="var(--water-soft)" stroke="var(--frame)"/></svg>`,
+  tank: `<svg viewBox="0 0 96 72" aria-hidden="true"><path d="M14 26l46-10 24 10-46 10z" fill="none" stroke="var(--glass-edge)" stroke-width="1.2"/><path d="M14 30v30l24 8V36z" fill="var(--water-soft)" stroke="var(--glass-edge)" stroke-width="1.5"/><path d="M38 36v32l46-10V26z" fill="var(--water-soft)" stroke="var(--glass-edge)" stroke-width="1.5"/><path d="M38 40l46-10" stroke="var(--water)" stroke-width="1.2"/><path d="M14 33l24 7" stroke="var(--water)" stroke-width="1.2"/><circle cx="58" cy="50" r="3" fill="var(--sac)"/><path d="M61 50l5-3v6z" fill="var(--sac)"/></svg>`
+};
+function renderPicker() {
+  $('#picker').innerHTML = Object.entries(TYPES).map(([k, t]) => `<button class="pick" type="button" data-type="${k}" aria-pressed="${S.type === k}">${ICONS[k]}<div><b>${t.label}</b><span>${t.sub}</span></div></button>`).join('');
+}
+$('#picker').addEventListener('click', e => {
+  const b = e.target.closest('[data-type]'); if (!b) return;
+  S.type = b.dataset.type; saveState(); renderPicker(); renderRail(); compute();
+});
+
+// ---------- rail ----------
+const openGroups = new Set(['project', 'geom', 'makeup']);
+function fieldHTML(f, c) {
+  if (f.show && !f.show(c)) return '';
+  const id = `f-${S.type}-${f.k}${f.id || ''}`, v = c[f.k];
+  const help = f.help ? `<div class="help">${f.help}</div>` : '';
+  if (f.kind === 'chk') return `<label class="chk" for="${id}"><input type="checkbox" id="${id}" data-k="${f.k}" ${v ? 'checked' : ''}><span>${f.label}</span></label>${help}`;
+  if (f.kind === 'sel') return `<div class="field"><label for="${id}">${f.label}</label><select id="${id}" data-k="${f.k}">${f.opts.map(([val, t]) => `<option value="${val}" ${String(v) === val ? 'selected' : ''}>${t}</option>`).join('')}</select>${help}</div>`;
+  return `<div class="field"><label for="${id}">${f.label}</label><div class="row"><input type="number" step="any" id="${id}" data-k="${f.k}" value="${v}"><span class="unit">${f.unit || ''}</span></div>${help}</div>`;
+}
+function plyEditor(c) {
+  const n = c.plies.length;
+  const rows = c.plies.map((t, i) => `<div class="ply"><span class="tag">Ply ${i + 1}</span>
+    <select id="ply-${S.type}-${i}" data-ply="${i}" aria-label="Structural ply ${i + 1} thickness">${NOMINALS.map(v => `<option value="${v}" ${v === t ? 'selected' : ''}>${v} mm nominal (min ${minThk(v)})</option>`).join('')}</select>
+    <button type="button" class="small" data-del="${i}" ${n <= 1 ? 'disabled' : ''} aria-label="Remove ply ${i + 1}">✕</button></div>`).join('');
+  return `<div class="help"><b>Structural plies</b>, ply 1 on the water side. These must carry the water load on their own. Calculations use ${S[S.type].nominalThk ? 'nominal thickness (course method setting)' : 'minimum thickness from SANS 50572 (EN 572-2)'}.</div><div class="plies">${rows}</div>
+   <div class="row" style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="small" id="addPly">Add structural ply</button></div>
+   ${fieldHTML(L('sacT', 'Sacrificial ply (extra, over and above)', [['0', 'None'], ...[4, 5, 6, 8, 10, 12, 15].map(v => [String(v), `${v} mm`])], {help: 'Added to the structural plies. It makes the glass stronger and stiffer while intact; if it breaks, the structural plies carry the load alone.'}), c)}
+   ${c.sacT > 0 ? fieldHTML(L('sacPos', 'Sacrificial ply position', [['water', 'Water side (protects against scratches and cleaners)'], ['dry', 'Dry / viewing side (protects against impact)']]), c) : ''}`;
+}
+function renderRail() {
+  const c = S[S.type], pj = S.project;
+  const det = (id, title, inner) => `<details data-g="${id}" ${openGroups.has(id) ? 'open' : ''}><summary>${title}</summary><div class="fields">${inner}</div></details>`;
+  const pf = (k, label, type = 'text') => `<div class="field"><label for="pj-${k}">${label}</label><input type="${type}" id="pj-${k}" data-pj="${k}" value="${esc(pj[k])}"></div>`;
+  let h = det('project', 'Project details', pf('project', 'Project') + pf('client', 'Client') + pf('site', 'Site / address') + `<div class="two">${pf('engineer', 'Designed by')}${pf('ref', 'Reference')}</div>` + pf('date', 'Date', 'date'));
+  h += det('geom', 'Size and water levels', GEOM[S.type].map(f => fieldHTML(f, c)).join(''));
+  h += det('makeup', 'Glass make-up', plyEditor(c));
+  for (const g of GROUPS(c)) h += det(g.id, g.title, g.fields.map(f => fieldHTML(f, c)).join(''));
+  $('#rail').innerHTML = h;
+}
+$('#rail').addEventListener('toggle', e => { const d = e.target; if (d.dataset && d.dataset.g) d.open ? openGroups.add(d.dataset.g) : openGroups.delete(d.dataset.g); }, true);
+$('#rail').addEventListener('input', e => {
+  const el = e.target, c = S[S.type];
+  if (el.dataset.pj) { S.project[el.dataset.pj] = el.value; schedule(); return; }
+  if (el.dataset.k && el.type === 'number') { const v = el.value.trim() === '' && el.dataset.k === 'defAbs' ? 0 : parseFloat(el.value); const ok = isFinite(v); el.setAttribute('aria-invalid', ok ? 'false' : 'true'); if (ok) { c[el.dataset.k] = v; schedule(); } }
+});
+$('#rail').addEventListener('change', e => {
+  const el = e.target, c = S[S.type];
+  if (el.dataset.ply !== undefined) { c.plies[+el.dataset.ply] = +el.value; }
+  else if (el.dataset.k && el.type === 'checkbox') c[el.dataset.k] = el.checked;
+  else if (el.dataset.k && el.tagName === 'SELECT') c[el.dataset.k] = el.dataset.k === 'sacT' ? +el.value : el.value;
+  else return;
+  renderRail(); restoreFocus(el.id); compute();
+});
+$('#rail').addEventListener('click', e => {
+  const c = S[S.type];
+  if (e.target.id === 'addPly') { c.plies.push(c.plies[c.plies.length - 1] || 12); renderRail(); compute(); }
+  const d = e.target.closest('[data-del]'); if (d && c.plies.length > 1) { c.plies.splice(+d.dataset.del, 1); renderRail(); compute(); }
+});
+function restoreFocus(id) { const el = id && document.getElementById(id); if (el) el.focus(); }
+let timer = null;
+function schedule() { clearTimeout(timer); timer = setTimeout(compute, 220); }
+const fullMakeup = c => c.sacT > 0 ? {plies: c.sacPos === 'water' ? [c.sacT, ...c.plies] : [...c.plies, c.sacT], sac: c.sacPos === 'water' ? 0 : c.plies.length} : {plies: c.plies, sac: -1};
+const makeupText = c => c.sacT > 0 ? (c.sacPos === 'water' ? `[${c.sacT}] + ${c.plies.join(' + ')}` : `${c.plies.join(' + ')} + [${c.sacT}]`) : c.plies.join(' + ');
+
+// ---------- compute ----------
+let R = null;
+function compute() {
+  saveState();
+  const type = S.type, c = S[type];
+  try {
+    const sp = designStrength(c, HOURS_50Y), st = designStrength(c, Math.max(1, c.repDays) * 24);
+    const panels = buildPanels(type, c).map(p => {
+      const fea = runFEA(p, c);
+      const res = evalMakeup(p, fea, c, c.plies, c.sacT, c.sacPos, sp.f, st.f);
+      return {p, fea, res, course: courseCalc(type, p, c, c.plies, sp.f), hand: handCalc(p, c, res), frame: frameDesign(p, fea, c, res), opts: searchOptions(p, fea, c, sp.f, st.f)};
+    });
+    const coarse = runFEA(panels[0].p, c, 0.5);
+    R = {type, c, sp, st, panels, coarse, okA: panels.every(x => x.res.A ? x.res.A.ok : false), okB: panels.every(x => x.res.B.ok)};
+    R.hasA = panels.every(x => x.res.A);
+    R.sugg = suggestions(R);
+    renderResults(); renderReport();
+  } catch (err) {
+    $('#results').innerHTML = `<div class="card"><h3>Could not calculate</h3><p>${esc(err.message)}</p><p class="muted">Check the supports: a plate needs at least one clamped edge or two supported edges to be stable.</p></div>`;
+  }
+}
+
+// ---------- suggestions ----------
+function suggestions(R) {
+  const c = R.c, out = [], P = R.panels, t = R.type, g = c.glass;
+  const anyFailA = R.hasA && !R.okA, failB = !R.okB;
+  if (failB) {
+    const p0 = P.find(x => !x.res.B.ok) || P[0];
+    const bestB = p0.opts.B[0], bestA = p0.opts.A[0];
+    out.push(`The selected make-up does not meet every check. Lightest passing options for ${esc(p0.p.name.toLowerCase())}: ` +
+      (bestB ? `without a sacrificial ply <b>${bestB.plies.join(' + ')} mm</b>` : 'no option without a sacrificial ply in the search range') + '; ' +
+      (bestA ? `with a sacrificial ply <b>${bestA.plies.join(' + ')} + [${bestA.A.sacT}] mm</b>` : 'no option with a sacrificial ply in the search range') + '. See the options table.');
+  }
+  if (c.plies.length === 1 && t !== 'tank') out.push('Monolithic glass is not safety glass and has no capacity after breakage. Use laminated safety glass marked to SANS 1263-1 for any underwater window (SANS 10137 §6.8, course notes).');
+  if (c.sacT <= 0 && t !== 'tank') out.push('For public pools and aquaria add a sacrificial ply over and above the structural plies, so the glass still carries the full water load if the exposed ply is damaged.');
+  if (R.okB && anyFailA) out.push('With the sacrificial ply added, a check after a structural ply breaks does not pass. Use a thicker sacrificial ply or more structural plies.');
+  if (g === 'FT') out.push('Toughened glass must be heat-soak tested (EN 14179) to reduce the risk of spontaneous nickel-sulphide breakage, and always laminated.');
+  if (g === 'AN' && P.some(x => Object.values(x.p.edges).includes('C'))) out.push('The course notes require toughened laminated glass where glass is set in a grouted channel. Change the glass type to toughened or use a dry-glazed clamp with pads.');
+  if (c.omega > 0 && c.interType === 'PVB') out.push('ω above 0 with PVB under permanent water load is not supported by the long-term interlayer data. Button & Pye (1993) treat the plies as acting separately (ω = 0).');
+  if (t === 'vertical' && !c.overflowOn) out.push('Tick the overflow check: a blocked overflow or a filling error can raise the water above the normal level.');
+  if (t === 'vertical' && (c.normAbove > 0) && !c.extraHead) out.push('The top of the window is below the water line. SANS 10137 §6.8.3.2 asks for an allowance for swimmers pushing off or large animals; consider 100–300 mm extra head.');
+  if (c.water === 'fresh' && t === 'tank') out.push('For marine tanks select sea water (1 040 kg/m³).');
+  if (P.some(x => x.res.largeDefl || (x.res.A && x.res.A.warnHalf))) out.push('Warning: deflection is more than half the glass thickness. Beyond this the simple plate theory no longer holds (Roark Ch. 11), the edges pull in from the frame, and seals and silicone take more movement. Consider a thicker or stiffer make-up even though the deflection limit is met.');
+  if (t === 'rimflow') {
+    const v = P[0].res.topVarIntact;
+    if (c.topLimitOn && v !== null && v > c.topLimit) out.push(`The top edge moves ${fmt(v)} mm relative to its ends, more than the ${fmt(c.topLimit)} mm allowed for even flow. A bottom-only clamped channel gives an almost uniform top-edge movement, or use a stiffer make-up.`);
+    out.push('Rim-flow glass: use toughened laminated glass, flat-polished top edge, and keep the overflow level so water flows evenly (course notes). Check the gutter and balance tank separately.');
+  }
+  if (t === 'tank') out.push('Bond panels with an aquarium-grade silicone with at least 1 MPa tensile strength (SANS 10137 §6.8.3.1). For large aquaria use rigid steel frames rather than silicone as the structural support.');
+  if (t !== 'tank') out.push('Detailing (course drawing): structural silicone with at least 1 MPa tensile strength, 80 Shore silicone setting blocks compatible with the interlayer, 316 stainless steel frame, and measures against galvanic corrosion.');
+  out.push('Glass must be marked to SANS 1263-1. Appoint a competent person (glazing) and complete SANS 10400-A Forms 2 and 3 for the local authority.');
+  return out;
+}
+
+// ---------- drawings ----------
+const PAL_SCREEN = {ink: 'var(--ink)', muted: 'var(--muted)', line: 'var(--line)', water: 'var(--water)', waterSoft: 'var(--water-soft)', glass: 'var(--glass)', edge: 'var(--glass-edge)', sac: 'var(--sac)', frame: 'var(--frame)', bg: 'var(--panel-2)', accent: 'var(--accent)', bad: 'var(--bad)', font: 'var(--f-mono)'};
+const PAL_PRINT = {ink: '#13272a', muted: '#56696b', line: '#c9d6d4', water: '#2c6bc9', waterSoft: 'rgba(44,107,201,0.13)', glass: '#cfe9e3', edge: '#2c8f80', sac: '#e0a53a', frame: '#7b8a8d', bg: '#ffffff', accent: '#16756a', bad: '#b8352a', font: 'JetBrains Mono, Consolas, monospace'};
+function dimH(x1, x2, y, label, P, up = false) {
+  const ty = up ? y - 6 : y + 14;
+  return `<g stroke="${P.muted}" stroke-width="1"><line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}"/><line x1="${x1}" y1="${y - 5}" x2="${x1}" y2="${y + 5}"/><line x1="${x2}" y1="${y - 5}" x2="${x2}" y2="${y + 5}"/></g><text x="${(x1 + x2) / 2}" y="${ty}" text-anchor="middle" font-size="13" fill="${P.ink}" font-family="${P.font}">${label}</text>`;
+}
+function dimV(x, y1, y2, label, P, left = true) {
+  const tx = left ? x - 6 : x + 6;
+  return `<g stroke="${P.muted}" stroke-width="1"><line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}"/><line x1="${x - 5}" y1="${y1}" x2="${x + 5}" y2="${y1}"/><line x1="${x - 5}" y1="${y2}" x2="${x + 5}" y2="${y2}"/></g><text x="${tx}" y="${(y1 + y2) / 2 + 4}" text-anchor="${left ? 'end' : 'start'}" font-size="13" fill="${P.ink}" font-family="${P.font}">${label}</text>`;
+}
+const txt = (x, y, s, P, o = {}) => `<text x="${x}" y="${y}" font-size="${o.size || 13}" fill="${o.fill || P.ink}" text-anchor="${o.anchor || 'start'}" font-family="${o.font || P.font}" ${o.weight ? `font-weight="${o.weight}"` : ''}>${s}</text>`;
+const hatchDef = (id, P) => `<defs><pattern id="${id}" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="${P.bg}"/><line x1="0" y1="0" x2="0" y2="6" stroke="${P.frame}" stroke-width="1.4"/></pattern></defs>`;
+
+function drawElevation(R, P, uid) {
+  const c = R.c, x = R.panels[0], p = x.p, hid = 'h' + uid;
+  if (R.type === 'vertical') {
+    const gw = p.glassW, gh = p.glassH;
+    const above = Math.max(c.tile, c.normAbove, c.overflowOn ? c.ovAbove : 0, 0) + 40;
+    const s = Math.min(380 / gw, 290 / (gh + above));
+    const X0 = 90, Y0 = 395, W = gw * s, H = gh * s, Yt = Y0 - H;
+    const Yw = Yt - c.normAbove * s, Yo = Yt - c.ovAbove * s;
+    const cv = c.cover * s, cl = c.clear * s;
+    const qmax = Math.max(p.qBot, 1e-9), PL = 90, px = X0 + W + 36;
+    const surf = Y0 - (p.hw + c.cover / 2) * s; // design surface
+    let g = hatchDef(hid, P);
+    g += `<rect x="20" y="${Math.min(Yw, surf)}" width="${W + 140}" height="${Y0 + 12 - Math.min(Yw, surf)}" fill="${P.waterSoft}"/>`;
+    g += `<rect x="${X0 - 26}" y="${Yt - c.tile * s}" width="${W + 52}" height="${c.tile * s}" fill="url(#${hid})" stroke="${P.frame}"/>` + txt(X0 + W / 2, Yt - c.tile * s - 6, 'Tile / coping band', P, {anchor: 'middle', fill: P.muted});
+    g += `<rect x="${X0 - cl - 8}" y="${Yt - cl - 8}" width="${W + 2 * cl + 16}" height="${H + 2 * cl + 16}" fill="none" stroke="${P.frame}" stroke-width="7"/>`;
+    g += `<rect x="${X0}" y="${Yt}" width="${W}" height="${H}" fill="${P.glass}" fill-opacity=".7" stroke="${P.edge}" stroke-width="2"/>`;
+    g += `<rect x="${X0 + cv}" y="${Yt + cv}" width="${W - 2 * cv}" height="${H - 2 * cv}" fill="none" stroke="${P.edge}" stroke-dasharray="5 4"/>`;
+    g += `<line x1="20" y1="${Yw}" x2="${X0 + W + 30}" y2="${Yw}" stroke="${P.water}" stroke-width="2"/>` + txt(24, Yw + 16, `▽ Normal level (${c.normAbove >= 0 ? '+' : ''}${fmt0(c.normAbove)} above glass)`, P, {fill: P.water});
+    if (c.overflowOn) g += `<line x1="20" y1="${Yo}" x2="${X0 + W + 30}" y2="${Yo}" stroke="${P.water}" stroke-dasharray="6 4"/>` + txt(24, Yo - 6, `▽ Overflow level (+${fmt0(c.ovAbove)})`, P, {fill: P.water});
+    // pressure diagram from design surface
+    const bx = px + PL;
+    g += `<polygon points="${px},${surf} ${px},${Y0} ${bx},${Y0}" fill="${P.water}" fill-opacity=".18" stroke="${P.water}"/>`;
+    const qTopX = px + PL * Math.max(0, p.qTop) / qmax;
+    g += `<line x1="${px}" y1="${Yt}" x2="${qTopX}" y2="${Yt}" stroke="${P.water}" stroke-dasharray="3 2"/>`;
+    g += txt(px + 2, Y0 + 26, `${fmt(p.qBot * 1000, 2)} kPa`, P, {fill: P.water}) + txt(qTopX + 4, Yt - 3, `${fmt(Math.max(0, p.qTop) * 1000, 2)} kPa`, P, {fill: P.water});
+    g += txt(px + 8, (surf + Y0) / 2, 'Design', P, {fill: P.muted}) + txt(px + 8, (surf + Y0) / 2 + 15, 'pressure', P, {fill: P.muted});
+    g += dimH(X0, X0 + W, Y0 + 30, `Glass ${fmt0(gw)}`, P);
+    g += dimH(X0 + cv, X0 + W - cv, Y0 - cv - 14, `Daylight ${fmt0(c.width)}`, P, true);
+    g += dimV(X0 - 34, Yt, Y0, `${fmt0(gh)}`, P);
+    g += dimV(X0 + cv + 18, Yt + cv, Y0 - cv, `Daylight ${fmt0(c.height)}`, P, false);
+    return `<svg viewBox="0 0 640 440" role="img" aria-label="Elevation of the underwater window">${g}</svg>`;
+  }
+  if (R.type === 'flat') {
+    const gw = p.glassW, gh = p.glassH, s = Math.min(420 / gw, 210 / gh);
+    const X0 = 110, Y0 = 30, W = gw * s, H = gh * s, cv = c.cover * s;
+    let g = hatchDef(hid, P);
+    g += `<rect x="${X0 - 8}" y="${Y0 - 8}" width="${W + 16}" height="${H + 16}" fill="none" stroke="${P.frame}" stroke-width="7"/>`;
+    g += `<rect x="${X0}" y="${Y0}" width="${W}" height="${H}" fill="${P.glass}" fill-opacity=".7" stroke="${P.edge}" stroke-width="2"/>`;
+    g += `<rect x="${X0 + cv}" y="${Y0 + cv}" width="${W - 2 * cv}" height="${H - 2 * cv}" fill="none" stroke="${P.edge}" stroke-dasharray="5 4"/>`;
+    g += txt(X0 + W / 2, Y0 + H / 2, 'PLAN', P, {anchor: 'middle', fill: P.muted, size: 12});
+    g += dimH(X0, X0 + W, Y0 + H + 26, `Glass ${fmt0(gw)} (daylight ${fmt0(c.length)})`, P);
+    g += dimV(X0 - 26, Y0, Y0 + H, `${fmt0(gh)}`, P);
+    // section strip
+    const sy = Y0 + H + 70, dep = Math.min(80, Math.max(24, p.depth * s * 0.5)), th = Math.max(6, R.panels[0].res.tFull * s);
+    g += `<rect x="${X0 - 40}" y="${sy}" width="${W + 80}" height="${dep}" fill="${P.waterSoft}"/><line x1="${X0 - 40}" y1="${sy}" x2="${X0 + W + 40}" y2="${sy}" stroke="${P.water}" stroke-width="2"/>`;
+    g += txt(X0 - 36, sy - 6, `▽ Water ${fmt0(p.depth)} above glass`, P, {fill: P.water});
+    g += `<rect x="${X0}" y="${sy + dep}" width="${W}" height="${th}" fill="${P.glass}" stroke="${P.edge}"/>`;
+    g += `<rect x="${X0 - 30}" y="${sy + dep + th}" width="${30 + cv}" height="16" fill="url(#${hid})" stroke="${P.frame}"/><rect x="${X0 + W - cv}" y="${sy + dep + th}" width="${30 + cv}" height="16" fill="url(#${hid})" stroke="${P.frame}"/>`;
+    g += txt(X0 + W / 2, sy + dep + th + 30, 'SECTION – glass supported on all four edges', P, {anchor: 'middle', fill: P.muted});
+    g += dimV(X0 + W + 60, sy, sy + dep, `${fmt0(p.depth)}`, P, false);
+    return `<svg viewBox="0 0 640 ${Math.round(sy + dep + th + 44)}" role="img" aria-label="Plan and section of the horizontal window">${g}</svg>`;
+  }
+  if (R.type === 'rimflow') {
+    const f = x.frame.find(e => e.side === 'bottom'), D = f ? (f.type === 'C' ? f.D : c.cover) : c.cover;
+    const tg = x.res.tFull, tot = c.freeH + D + c.clear;
+    const s = Math.min(300 / tot, 2.2), X0 = 300, Ytop = 70, Hfree = c.freeH * s, Yc = Ytop + Hfree, Yb = Yc + D * s;
+    const T = Math.max(6, tg * s), chW = (f && f.chanW ? f.chanW : tg + 2 * c.padT) * s;
+    let g = hatchDef(hid, P);
+    // elevation strip
+    const Ls = 560, hs = 16;
+    g += `<rect x="40" y="18" width="${Ls}" height="${hs}" fill="${P.glass}" stroke="${P.edge}"/>` + txt(40, 13, `ELEVATION – length ${fmt0(c.length)} mm, height ${fmt0(c.freeH)} mm above channel`, P, {fill: P.muted});
+    if (c.support === '3edge') g += `<rect x="32" y="14" width="8" height="${hs + 8}" fill="url(#${hid})" stroke="${P.frame}"/><rect x="${40 + Ls}" y="14" width="8" height="${hs + 8}" fill="url(#${hid})" stroke="${P.frame}"/>`;
+    g += `<rect x="40" y="${18 + hs}" width="${Ls}" height="5" fill="url(#${hid})" stroke="${P.frame}"/>`;
+    // section: water on pool side
+    const Yw = Ytop - c.weir * s - 2;
+    g += `<rect x="40" y="${Yw}" width="${X0 - 40}" height="${Yb - Yw}" fill="${P.waterSoft}"/>`;
+    g += `<path d="M40 ${Yw} H${X0 + T / 2} q ${18} 0 ${30} ${40} t ${12} ${Hfree - 30}" fill="none" stroke="${P.water}" stroke-width="2"/>`;
+    g += txt(46, Yw - 6, `▽ Overflow – ${fmt0(c.weir)} mm over the top`, P, {fill: P.water});
+    g += txt(60, Yc - 20, 'POOL', P, {fill: P.water, size: 13, weight: 600});
+    // channel / structure
+    g += `<path d="M40 ${Yc} H${X0 - (chW - T) / 2} V${Yb + c.clear * s} H${X0 + T + (chW - T) / 2} V${Yc} H${X0 + T + 120} V${Yb + 60} H40 Z" fill="url(#${hid})" stroke="${P.frame}"/>`;
+    g += `<rect x="${X0 + T + 60}" y="${Yc - 40}" width="80" height="40" fill="${P.waterSoft}" stroke="${P.frame}"/>` + txt(X0 + T + 100, Yc - 46, 'Gutter', P, {anchor: 'middle', fill: P.muted});
+    // glass plies
+    let xx = X0; const {plies, sac} = fullMakeup(c);
+    plies.forEach((t, i) => { const w = t * s; g += `<rect x="${xx}" y="${Ytop}" width="${Math.max(1.5, w)}" height="${Yb - Ytop}" fill="${i === sac ? P.sac : P.glass}" fill-opacity="${i === sac ? .55 : .9}" stroke="${P.edge}" stroke-width=".8"/>`; xx += w + (i < plies.length - 1 ? c.inter * s : 0); });
+    if (f && f.type === 'C') {
+      const pd = D * s / 4;
+      g += `<rect x="${X0 - c.padT * s}" y="${Yc}" width="${c.padT * s}" height="${pd}" fill="${P.ink}" opacity=".55"/><rect x="${X0 + T}" y="${Yb - pd}" width="${c.padT * s}" height="${pd}" fill="${P.ink}" opacity=".55"/>`;
+      g += `<rect x="${X0 + T}" y="${Yc}" width="${c.padT * s}" height="${pd}" fill="${P.ink}" opacity=".55"/><rect x="${X0 - c.padT * s}" y="${Yb - pd}" width="${c.padT * s}" height="${pd}" fill="${P.ink}" opacity=".55"/>`;
+    }
+    g += dimV(X0 - chW / 2 - 18, Ytop, Yc, `${fmt0(c.freeH)} free`, P);
+    g += dimV(X0 - chW / 2 - 18, Yc, Yb, `${fmt0(D)} embed`, P);
+    g += dimH(X0, X0 + T, Yb + 34, `${fmt0(tg)}`, P);
+    g += txt(X0 + T + 8, Ytop + 12, makeupText(c) + ' mm', P, {fill: P.muted});
+    return `<svg viewBox="0 0 640 ${Math.round(Yb + 70)}" role="img" aria-label="Section through the rim-flow edge">${g}</svg>`;
+  }
+  // tank isometric
+  const L = c.L, Wd = c.W, H = c.H, s = Math.min(330 / (L + Wd), 260 / (H + (L + Wd) * 0.5));
+  const raw = (X, Y, Z) => [(X - Y) * 0.866 * s, (X + Y) * 0.5 * s - Z * s];
+  const corners = [[0, 0, 0], [L, 0, 0], [L, Wd, 0], [0, Wd, 0], [0, 0, H], [L, 0, H], [L, Wd, H], [0, Wd, H]].map(q => raw(...q));
+  const minX = Math.min(...corners.map(q => q[0])), maxX = Math.max(...corners.map(q => q[0])), minY = Math.min(...corners.map(q => q[1])), maxY = Math.max(...corners.map(q => q[1]));
+  const offX = 320 - (minX + maxX) / 2, offY = 30 - minY;
+  const pr = (X, Y, Z) => { const q = raw(X, Y, Z); return [q[0] + offX, q[1] + offY]; };
+  const VH = Math.round(maxY - minY + 80);
+  const poly = pts => pts.map(q => pr(...q).map(v => v.toFixed(1)).join(',')).join(' ');
+  const hw = Math.min(c.Hw, H);
+  let g = '';
+  g += `<polygon points="${poly([[0, 0, 0], [L, 0, 0], [L, Wd, 0], [0, Wd, 0]])}" fill="${P.glass}" stroke="${P.edge}"/>`;
+  g += `<polygon points="${poly([[0, 0, 0], [L, 0, 0], [L, 0, H], [0, 0, H]])}" fill="none" stroke="${P.edge}" stroke-dasharray="3 3"/>`;
+  g += `<polygon points="${poly([[0, 0, 0], [0, Wd, 0], [0, Wd, H], [0, 0, H]])}" fill="none" stroke="${P.edge}" stroke-dasharray="3 3"/>`;
+  g += `<polygon points="${poly([[0, Wd, 0], [L, Wd, 0], [L, Wd, hw], [0, Wd, hw]])}" fill="${P.waterSoft}"/>`;
+  g += `<polygon points="${poly([[L, 0, 0], [L, Wd, 0], [L, Wd, hw], [L, 0, hw]])}" fill="${P.waterSoft}"/>`;
+  g += `<polygon points="${poly([[0, 0, hw], [L, 0, hw], [L, Wd, hw], [0, Wd, hw]])}" fill="${P.water}" fill-opacity=".18" stroke="${P.water}"/>`;
+  g += `<polygon points="${poly([[0, Wd, 0], [L, Wd, 0], [L, Wd, H], [0, Wd, H]])}" fill="${P.glass}" fill-opacity=".35" stroke="${P.edge}" stroke-width="2"/>`;
+  g += `<polygon points="${poly([[L, 0, 0], [L, Wd, 0], [L, Wd, H], [L, 0, H]])}" fill="${P.glass}" fill-opacity=".35" stroke="${P.edge}" stroke-width="2"/>`;
+  if (c.braced) g += `<polyline points="${poly([[0, Wd, H], [L, Wd, H], [L, 0, H]])}" fill="none" stroke="${P.frame}" stroke-width="5"/>`;
+  const a1 = pr(0, Wd, 0), a2 = pr(L, Wd, 0), b2 = pr(L, 0, 0), h1 = pr(L, 0, H);
+  g += txt((a1[0] + a2[0]) / 2 - 16, (a1[1] + a2[1]) / 2 + 30, `L ${fmt0(L)}`, P, {anchor: 'middle'});
+  g += txt((a2[0] + b2[0]) / 2 + 16, (a2[1] + b2[1]) / 2 + 24, `W ${fmt0(Wd)}`, P);
+  g += txt(h1[0] + 12, (h1[1] + b2[1]) / 2, `H ${fmt0(H)}`, P) + txt(h1[0] + 12, (h1[1] + b2[1]) / 2 + 16, `water ${fmt0(hw)}`, P, {fill: P.water});
+  const fc = pr(L / 2, Wd, H * 0.55);
+  g += txt(fc[0], fc[1], 'FRONT', P, {anchor: 'middle', fill: P.muted, size: 13});
+  const ec = pr(L, Wd / 2, H * 0.55);
+  g += txt(ec[0] + 4, ec[1], 'END', P, {anchor: 'middle', fill: P.muted, size: 13});
+  return `<svg viewBox="0 0 640 ${VH}" role="img" aria-label="Fish tank isometric">${g}</svg>`;
+}
+
+function drawSection(R, P, uid) {
+  const c = R.c, x = R.panels[0], res = x.res, hid = 'k' + uid;
+  const {plies, sac} = fullMakeup(c), tg = res.tFull;
+  if (R.type === 'tank') {
+    const s = Math.min(6, 220 / (tg * 2 + 60));
+    const ox = 180, oy = 60, T = tg * s;
+    let g = '';
+    g += `<rect x="${ox}" y="${oy}" width="${T}" height="${200}" fill="${P.glass}" stroke="${P.edge}"/>`;
+    g += `<rect x="${ox + T}" y="${oy + 200 - T}" width="${220}" height="${T}" fill="${P.glass}" stroke="${P.edge}"/>`;
+    g += `<rect x="${ox + T}" y="${oy + 200 - T - 4 * s}" width="${4 * s}" height="${4 * s}" fill="${P.ink}" opacity=".5"/>`;
+    g += `<rect x="${ox + T - 1}" y="${oy}" width="2" height="${200 - T}" fill="${P.ink}" opacity=".35"/>`;
+    g += `<rect x="${ox + T + 1}" y="${oy}" width="${150}" height="${200 - T}" fill="${P.waterSoft}"/>` + txt(ox + T + 70, oy + 80, 'WATER', P, {anchor: 'middle', fill: P.water, weight: 600});
+    g += txt(ox - 8, oy + 100, 'End panel', P, {anchor: 'end', fill: P.muted}) + txt(ox + T + 110, oy + 200 + 18, 'Front panel', P, {anchor: 'middle', fill: P.muted});
+    g += txt(ox + T + 4 * s + 6, oy + 200 - T - 4, 'Silicone bead (≥ 1 MPa)', P, {fill: P.muted});
+    g += dimH(ox, ox + T, oy - 14, `${fmt0(tg)}`, P, true);
+    return `<svg viewBox="0 0 640 300" role="img" aria-label="Plan detail of a silicone corner joint">${g}</svg>`;
+  }
+  const f = x.frame.find(e => e.type === 'C') || x.frame.find(e => e.side === 'bottom') || x.frame[0];
+  if (!f) return '';
+  const isC = f.type === 'C';
+  const depth = isC ? f.D : c.cover + c.clear;
+  const width = isC ? f.chanW : res.tFull + 2 * c.sideClear;
+  const s = Math.min(6, 300 / (depth + 70), 300 / (width + 60));
+  const ox = 320 - width * s / 2, oy = 70 + 40 * s * 0.3;
+  const base = oy + depth * s;
+  let g = hatchDef(hid, P);
+  // frame / channel body
+  const wall = 12 * s;
+  g += `<path d="M${ox - wall - 30} ${oy} H${ox} V${base} H${ox + width * s} V${oy} H${ox + width * s + wall + 30} V${base + wall + 10} H${ox - wall - 30} Z" fill="url(#${hid})" stroke="${P.frame}" stroke-width="1.2"/>`;
+  // glass
+  const gx = ox + (isC ? c.padT : c.sideClear) * s, gb = isC ? base - c.clear * s : base - c.clear * s;
+  let xx = gx;
+  plies.forEach((t, i) => { const w = t * s; g += `<rect x="${xx}" y="${oy - 60}" width="${w}" height="${gb - (oy - 60)}" fill="${i === sac ? P.sac : P.glass}" fill-opacity="${i === sac ? .6 : .9}" stroke="${P.edge}"/>`; xx += w; if (i < plies.length - 1) { g += `<rect x="${xx}" y="${oy - 60}" width="${Math.max(1, c.inter * s)}" height="${gb - (oy - 60)}" fill="${P.ink}" opacity=".25"/>`; xx += c.inter * s; } });
+  // setting block
+  g += `<rect x="${gx}" y="${gb}" width="${res.tFull * s}" height="${c.clear * s}" fill="${P.ink}" opacity=".6"/>`;
+  if (isC) {
+    const pd = f.D * s / 4;
+    g += `<rect x="${ox}" y="${oy}" width="${c.padT * s}" height="${pd}" fill="${P.ink}" opacity=".45"/><rect x="${gx + res.tFull * s}" y="${oy}" width="${c.padT * s}" height="${pd}" fill="${P.ink}" opacity=".45"/>`;
+    g += `<rect x="${ox}" y="${base - pd - c.clear * s}" width="${c.padT * s}" height="${pd}" fill="${P.ink}" opacity=".45"/><rect x="${gx + res.tFull * s}" y="${base - pd - c.clear * s}" width="${c.padT * s}" height="${pd}" fill="${P.ink}" opacity=".45"/>`;
+    g += txt(ox + width * s + wall + 36, oy + pd / 2 + 4, `Pads ${fmt0(c.padT)} thick,`, P, {fill: P.muted}) + txt(ox + width * s + wall + 36, oy + pd / 2 + 20, `${fmt(f.D / 4, 0)} high`, P, {fill: P.muted});
+  } else {
+    g += `<rect x="${ox}" y="${oy}" width="${c.sideClear * s}" height="${depth * s - c.clear * s}" fill="${P.ink}" opacity=".35"/>`;
+    g += `<rect x="${gx + res.tFull * s}" y="${oy}" width="${c.sideClear * s}" height="${depth * s - c.clear * s}" fill="${P.ink}" opacity=".2"/>`;
+    g += txt(ox + width * s + wall + 36, base + 2, 'Silicone / gasket', P, {fill: P.muted}) + txt(ox + width * s + wall + 36, base + 18, 'bearing (dry side)', P, {fill: P.muted});
+  }
+  g += txt(ox - wall - 34, oy - 30, 'WATER SIDE', P, {anchor: 'end', fill: P.water, weight: 600});
+  g += txt(ox + width * s + wall + 34, oy - 30, 'DRY SIDE', P, {fill: P.muted, weight: 600});
+  g += txt(gx + res.tFull * s / 2, oy - 66, makeupText(c) + ' mm', P, {anchor: 'middle'});
+  g += dimV(ox - wall - 40, oy, base, `${fmt0(depth)}${isC ? ' embed' : ' rebate'}`, P);
+  if (!isC) g += dimV(ox + width * s + wall + 40, oy, gb, `${fmt0(c.cover)} cover`, P, false);
+  g += dimH(ox, ox + width * s, base + wall + 30, `${fmt0(width)} ${isC ? 'channel' : 'rebate'} width`, P);
+  if (sac >= 0) g += `<rect x="${ox - wall - 30}" y="${base + wall + 46}" width="10" height="10" fill="${P.sac}" fill-opacity=".6"/>` + txt(ox - wall - 16, base + wall + 55, 'Sacrificial ply', P, {fill: P.muted});
+  return `<svg viewBox="0 0 640 ${Math.round(base + wall + 70)}" role="img" aria-label="Edge detail">${g}</svg>`;
+}
+
+// ---------- FEA plots ----------
+const CMAP = [[68, 1, 84], [65, 68, 135], [42, 120, 142], [34, 168, 132], [122, 209, 81], [253, 231, 37]];
+function cmap(t) { t = Math.max(0, Math.min(1, t)) * (CMAP.length - 1); const i = Math.min(CMAP.length - 2, Math.floor(t)), f = t - i; return CMAP[i].map((v, k) => Math.round(v + f * (CMAP[i + 1][k] - v))); }
+function fieldValues(x, mode, c) {
+  const f = x.fea, r = x.res, nn = f.w.length, v = new Float64Array(nn);
+  for (let n = 0; n < nn; n++) v[n] = mode === 'w' ? Math.abs(f.w[n]) * r.sc * Math.pow(f.tref / r.intact.hw, 3) : 6 * Math.abs(f.M1[n]) * r.sc * c.gF / r.intact.hs ** 2;
+  return v;
+}
+function plotField(canvas, x, mode, c, dark) {
+  const f = x.fea, vals = fieldValues(x, mode, c);
+  const ar = f.b / f.a, dispAr = Math.max(0.22, Math.min(0.72, ar));
+  const Wc = 720, pad = 34, Hc = Math.round((Wc - 2 * pad) * dispAr) + 2 * pad;
+  canvas.width = Wc; canvas.height = Hc;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = dark ? '#132325' : '#ffffff'; ctx.fillRect(0, 0, Wc, Hc);
+  const pw = Wc - 2 * pad, ph = Hc - 2 * pad, img = ctx.createImageData(pw, ph);
+  let vmax = 0; for (const v of vals) vmax = Math.max(vmax, v);
+  for (let py = 0; py < ph; py++) for (let px = 0; px < pw; px++) {
+    const X = (px + .5) / pw * f.a, Y = (1 - (py + .5) / ph) * f.b;
+    const i = Math.min(f.nx - 1, Math.floor(X / f.hx)), j = Math.min(f.ny - 1, Math.floor(Y / f.hy));
+    const u = X / f.hx - i, w = Y / f.hy - j;
+    const v = (1 - u) * (1 - w) * vals[f.nid(i, j)] + u * (1 - w) * vals[f.nid(i + 1, j)] + u * w * vals[f.nid(i + 1, j + 1)] + (1 - u) * w * vals[f.nid(i, j + 1)];
+    const col = cmap(vmax ? v / vmax : 0), o = 4 * (py * pw + px);
+    img.data[o] = col[0]; img.data[o + 1] = col[1]; img.data[o + 2] = col[2]; img.data[o + 3] = 255;
+  }
+  ctx.putImageData(img, pad, pad);
+  ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 1;
+  const ex = Math.max(1, Math.round(f.nx / 40)), ey = Math.max(1, Math.round(f.ny / 30));
+  for (let i = 0; i <= f.nx; i += ex) { const X = pad + i / f.nx * pw; ctx.beginPath(); ctx.moveTo(X, pad); ctx.lineTo(X, pad + ph); ctx.stroke(); }
+  for (let j = 0; j <= f.ny; j += ey) { const Y = pad + j / f.ny * ph; ctx.beginPath(); ctx.moveTo(pad, Y); ctx.lineTo(pad + pw, Y); ctx.stroke(); }
+  // supports
+  const edgeStyle = {S: [dark ? '#e3eeec' : '#13272a', 4, []], C: [dark ? '#e8b35a' : '#b26b00', 7, []], F: [dark ? '#98aeac' : '#56696b', 1.5, [5, 4]]};
+  const drawEdge = (x1, y1, x2, y2, t) => { const [col, lw, dash] = edgeStyle[t]; ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.setLineDash(dash); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.setLineDash([]); };
+  const e = x.p.edges;
+  drawEdge(pad, pad + ph, pad + pw, pad + ph, e.bottom); drawEdge(pad, pad, pad + pw, pad, e.top);
+  drawEdge(pad, pad, pad, pad + ph, e.left); drawEdge(pad + pw, pad, pad + pw, pad + ph, e.right);
+  // max marker
+  let nmax = 0; vals.forEach((v, n) => { if (v > vals[nmax]) nmax = n; });
+  const nnx = f.nnx, nny = f.nny; let mi = 0, mj = 0;
+  for (let i = 0; i < nnx; i++) for (let j = 0; j < nny; j++) if (f.nid(i, j) === nmax) { mi = i; mj = j; }
+  const mx = pad + mi / f.nx * pw, my = pad + (1 - mj / f.ny) * ph;
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(mx, my, 7, 0, 7); ctx.stroke();
+  ctx.fillStyle = dark ? '#e3eeec' : '#13272a'; ctx.font = '12px JetBrains Mono, monospace';
+  const lab = mode === 'w' ? `max ${fmt(vals[nmax])} mm` : `max ${fmt(vals[nmax])} MPa`;
+  ctx.fillText(lab, Math.min(Wc - 150, mx + 10), Math.max(14, my - 10));
+  ctx.fillText(`${fmt0(f.a)} mm`, pad + pw / 2 - 30, Hc - 10);
+  ctx.save(); ctx.translate(14, pad + ph / 2 + 30); ctx.rotate(-Math.PI / 2); ctx.fillText(`${fmt0(f.b)} mm${dispAr !== ar ? ' (not to scale)' : ''}`, 0, 0); ctx.restore();
+  return {vmax};
+}
+function plot3D(canvas, x, c, dark) {
+  const f = x.fea, vals = fieldValues(x, 'w', c);
+  const Wc = 720, Hc = 420; canvas.width = Wc; canvas.height = Hc;
+  const ctx = canvas.getContext('2d'); ctx.fillStyle = dark ? '#132325' : '#ffffff'; ctx.fillRect(0, 0, Wc, Hc);
+  let vmax = 0; for (const v of vals) vmax = Math.max(vmax, v);
+  const ar = Math.max(0.15, Math.min(1, f.b / f.a));
+  const Lx = 520, Ly = 520 * ar * 0.9, ox = 70, oy = 300 + Ly * 0.25;
+  const zs = 70 / (vmax || 1);
+  const P = (i, j) => { const n = f.nid(i, j), u = i / f.nx, v = j / f.ny; return [ox + u * Lx + v * Ly * 0.55, oy - v * Ly * 0.5 - vals[n] * zs, vals[n]]; };
+  const si = Math.max(1, Math.round(f.nx / 40)), sj = Math.max(1, Math.round(f.ny / 26));
+  for (let j = f.ny - sj; j >= 0; j -= sj) for (let i = 0; i < f.nx; i += si) {
+    const i2 = Math.min(f.nx, i + si), j2 = Math.min(f.ny, j + sj);
+    const a = P(i, j), b = P(i2, j), cc = P(i2, j2), d = P(i, j2);
+    const col = cmap(vmax ? (a[2] + b[2] + cc[2] + d[2]) / 4 / vmax : 0);
+    ctx.fillStyle = `rgb(${col})`; ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = .5;
+    ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(cc[0], cc[1]); ctx.lineTo(d[0], d[1]); ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+  ctx.fillStyle = dark ? '#e3eeec' : '#13272a'; ctx.font = '12px JetBrains Mono, monospace';
+  ctx.fillText(`Deflected shape, exaggerated. Max ${fmt(vmax)} mm`, 16, 22);
+  return {vmax};
+}
+function legendCanvas() {
+  const cv = document.createElement('canvas'); cv.width = 220; cv.height = 12; const ctx = cv.getContext('2d');
+  for (let i = 0; i < 220; i++) { ctx.fillStyle = `rgb(${cmap(i / 219)})`; ctx.fillRect(i, 0, 1, 12); }
+  return cv;
+}
+const isDark = () => { const t = document.documentElement.dataset.theme; return t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches); };
+
+// ---------- results ----------
+let feaMode = 'w', feaPanel = 0;
+const pill = (ok, yes = 'Pass', no = 'Fail') => ok === null ? '<span class="pill na">n/a</span>' : ok === 'warn' ? '<span class="pill warn">Warning</span>' : `<span class="pill ${ok ? 'ok' : 'bad'}">${ok ? yes : no}</span>`;
+function renderResults() {
+  const c = R.c, P = R.panels, x0 = P[0];
+  const util = (s, f) => `${fmt(100 * s / f, 0)}%`;
+  const worst = (fn) => P.reduce((m, x) => Math.max(m, fn(x)), 0);
+  const vA = R.hasA ? `<dl class="kv">${P.map(x => { const A = x.res.A; return `<dt>${P.length > 1 ? esc(x.p.name) + ' – all' : 'All'} plies intact</dt><dd>${fmt(A.sIntact)} MPa · ${fmt(A.wIntact)} mm</dd>
+       <dt>Sacrificial ply broken: stress</dt><dd>${fmt(A.s)} / ${fmt(R.sp.f)} MPa (${util(A.s, R.sp.f)})</dd><dt>Sacrificial ply broken: deflection</dt><dd>${fmt(A.w)} / ${fmt(x.res.limit)} mm</dd>${A.warnHalf ? `<dt class="warn-t">Warning: more than half the glass thickness</dt><dd class="warn-t">&gt; ${fmt(A.tNom / 2, 1)} mm</dd>` : ''}${A.topVar !== null && c.topLimitOn ? `<dt>Top edge variation</dt><dd>${fmt(A.topVar)} / ${fmt(c.topLimit)} mm</dd>` : ''}<dt>Deflection at design stress</dt><dd>${fmt(A.w * R.sp.f / A.s)} mm</dd><dt>A structural ply breaks</dt><dd>${A.post ? `${fmt(A.post.s)} / ${fmt(R.st.f)} MPa` : '–'}</dd>`; }).join('')}</dl>
+     <div class="muted" style="font-size:12.5px">${c.sacT} mm sacrificial ply added on the ${c.sacPos === 'water' ? 'water' : 'dry'} side of the structural plies. While intact the glass is stronger than without it; if it breaks, the structural plies carry the full permanent water load on their own.</div>`
+    : `<div class="muted">No sacrificial ply. Choose one under Glass make-up to see this option.</div>`;
+  const vB = `<dl class="kv">${P.map(x => `<dt>${esc(x.p.name)} stress</dt><dd>${fmt(x.res.B.s)} / ${fmt(R.sp.f)} MPa (${util(x.res.B.s, R.sp.f)})</dd><dt>Deflection</dt><dd>${fmt(x.res.B.w)} / ${fmt(x.res.limit)} mm</dd>${x.res.largeDefl ? `<dt class="warn-t">Warning: more than half the glass thickness</dt><dd class="warn-t">&gt; ${fmt(x.res.halfT, 1)} mm</dd>` : ''}${x.res.topVarIntact !== null && c.topLimitOn ? `<dt>Top edge variation</dt><dd>${fmt(x.res.topVarIntact)} / ${fmt(c.topLimit)} mm</dd>` : ''}<dt>Deflection at design stress</dt><dd>${fmt(x.res.B.w * R.sp.f / x.res.B.s)} mm</dd><dt>After one ply breaks</dt><dd>${x.res.B.post ? `${fmt(x.res.B.post.s)} / ${fmt(R.st.f)} MPa` : (x.res.B.monoAllowed ? 'monolithic – permitted' : 'no residual capacity')}</dd>`).join('')}</dl>
+     <div class="muted" style="font-size:12.5px">${c.plies.length > 1 ? `Structural plies only (${c.plies.join(' + ')} mm). A broken ply must be replaced within ${fmt0(c.repDays)} days; the remaining plies are checked for that period.` : 'Single sheet of glass: it has no strength left if it breaks.'}</div>`;
+  const fr = x0.frame;
+  const emb = fr.find(e => e.type === 'C'), cov = fr.find(e => e.type === 'S');
+  const figs = [
+    ['Design water pressure', x0.p.kind === 'hydro' ? `${fmt(x0.p.qBot * 1000, 2)} kPa` : `${fmt(x0.res.sc * 1000, 2)} kPa`, x0.p.kind === 'hydro' ? 'at the bottom support' : 'uniform, incl. self weight'],
+    ['Required monolithic t', `${fmt(Math.sqrt(6 * x0.res.Md / R.sp.f), 1)} mm`, 'equivalent, from FEA'],
+    ['Make-up', `${makeupText(c).replace(/ /g, '')}`, `${fmt(x0.res.tFull, 1)} mm · ${fmt(x0.res.A ? x0.res.A.weight : x0.res.weight, 0)} kg/m²`],
+    R.type === 'tank' ? ['Glass weight', `${fmt0(P.reduce((m, y) => m + y.res.weight * y.p.glassW * y.p.glassH / 1e6 * (y.p.id === 'base' ? 1 : 2), 0))} kg`, 'all five panels'] : emb ? ['Embedment in channel', `${fmt0(emb.D)} mm`, `channel ${fmt0(emb.chanW)} mm wide`] : cov ? ['Edge cover into frame', `${fmt0(Math.max(...fr.filter(e => e.type === 'S').map(e => e.req)))} mm min`, `rebate ${fmt0(cov.rebate)} deep × ${fmt0(cov.rebateW)} wide`] : ['Glass weight', `${fmt(x0.res.weight * (x0.p.glassW || 0) * (x0.p.glassH || 0) / 1e6, 0)} kg`, x0.p.name]
+  ].map(([a, b, s]) => `<div class="fig"><small>${a}</small><b>${b}</b><small>${s}</small></div>`).join('');
+  const panelBtns = P.length > 1 ? `<div class="seg" role="group" aria-label="Panel">${P.map((x, i) => `<button type="button" data-panel="${i}" aria-pressed="${i === feaPanel}">${esc(x.p.name.split(' ')[0])}</button>`).join('')}</div>` : '';
+  if (feaPanel >= P.length) feaPanel = 0;
+  const xp = P[feaPanel];
+  const optMk = (r, scen) => scen === 'A' ? (c.sacPos === 'water' ? `[${r.A.sacT}] + ${r.plies.join(' + ')}` : `${r.plies.join(' + ')} + [${r.A.sacT}]`) : r.plies.join(' + ');
+  const optRows = (list, scen) => list.length ? list.map(r => `<tr><td class="n">${optMk(r, scen)}</td><td class="n">${fmt(scen === 'A' ? r.A.tNom : r.tNom, 1)}</td><td class="n">${fmt(scen === 'A' ? r.A.weight : r.weight, 0)}</td><td class="n">${scen === 'A' ? fmt(r.A.s) : fmt(r.B.s)}</td><td class="n">${scen === 'A' ? fmt(r.A.w) : fmt(r.B.w)}</td><td class="n">${scen === 'A' ? (r.A.post ? fmt(r.A.post.s) : '–') : r.B.post ? fmt(r.B.post.s) : '–'}</td><td><button type="button" class="small" data-use="${r.plies.join(',')}" data-sac="${scen === 'A' ? r.A.sacT : 0}">Use</button></td></tr>`).join('') : `<tr><td colspan="7" class="muted">No make-up in the search range passes. Change glass type, interlayer or supports.</td></tr>`;
+  const head = `<tr><th>Make-up (mm, water side first)</th><th>Total mm</th><th>kg/m²</th><th>σ MPa</th><th>Defl. mm</th><th>Post-break σ</th><th></th></tr>`;
+  $('#results').innerHTML = `
+  <div class="card">
+    <div class="card-h"><div><div class="eyebrow">${TYPES[R.type].label}</div><h2>${esc(GLASS[c.glass].name)}${fullMakeup(c).plies.length > 1 ? ' laminated' : ' monolithic'}, ${makeupText(c)} mm ${fullMakeup(c).plies.length > 1 ? esc(c.interType) : ''}</h2>${c.sacT > 0 ? '<div class="muted" style="font-size:12.5px">[ ] = sacrificial ply</div>' : ''}</div>
+      <div class="muted">Design strength ${fmt(R.sp.f)} MPa (50-yr load) · ${fmt(R.st.f)} MPa for ${fmt0(c.repDays)} days</div></div>
+    <div class="muted" style="margin:-4px 0 12px;font-size:13px">Deflection limit${P.length > 1 ? 's' : ''}: ${P.map(x => `${P.length > 1 ? esc(x.p.name) + ' ' : ''}${limitText(x, c)}`).join('; ')}${R.type === 'rimflow' && c.topLimitOn ? `. Top-edge variation is checked separately against ${fmt(c.topLimit)} mm.` : '.'}</div>
+    <div class="verdicts">
+      <div class="verdict ${R.hasA ? (R.okA ? 'ok' : 'bad') : ''}"><h3>With sacrificial ply ${R.hasA ? pill(R.okA) : pill(null)}</h3>${vA}</div>
+      <div class="verdict ${R.okB ? 'ok' : 'bad'}"><h3>Without sacrificial ply ${pill(R.okB)}</h3>${vB}</div>
+    </div>
+    <div class="figs">${figs}</div>
+  </div>
+  <div class="card"><div class="card-h"><h3>Drawings and sizes</h3><span class="muted">Dimensions in mm</span></div>
+    <div class="drawings"><figure class="dwg" style="margin:0">${drawElevation(R, PAL_SCREEN, 's')}<figcaption>${R.type === 'rimflow' ? 'Section through the rim-flow edge with elevation strip' : R.type === 'tank' ? 'Tank arrangement' : 'Elevation with water levels and pressure diagram'}</figcaption></figure>
+    <figure class="dwg" style="margin:0">${drawSection(R, PAL_SCREEN, 's')}<figcaption>${R.type === 'tank' ? 'Corner joint (plan)' : 'Edge detail: depth of glass into the frame'}</figcaption></figure></div>
+    ${sizesTable(R)}
+  </div>
+  <div class="card"><div class="card-h"><h3>Finite-element analysis</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${panelBtns}<div class="seg" role="group" aria-label="Plot"><button type="button" data-mode="w" aria-pressed="${feaMode === 'w'}">Deflection</button><button type="button" data-mode="s" aria-pressed="${feaMode === 's'}">Stress</button><button type="button" data-mode="3d" aria-pressed="${feaMode === '3d'}">3D shape</button></div></div></div>
+    <div class="fea-wrap"><canvas id="feaCanvas" aria-label="FEA contour plot"></canvas>
+      <div class="legend"><span>0</span><span id="legendSlot"></span><span id="legendMax"></span></div>
+      <div class="muted" style="font-size:12.5px">${xp.fea.nx} × ${xp.fea.ny} MITC4 plate elements, ${xp.fea.ndof} unknowns, solved in ${fmt0(xp.fea.ms)} ms. Thick dark edges are simply supported, amber edges clamped, dashed edges free. Stress shown in the governing ply of the intact laminate.</div></div>
+  </div>
+  <div class="card"><div class="card-h"><h3>Options</h3><span class="muted">${esc(GLASS[c.glass].name)}, ${esc(c.interType)}, ω = ${fmt(c.omega, 2)} · ${esc(P.find(x => !x.res.B.ok)?.p.name || x0.p.name)}</span></div>
+    ${(() => { const op = (P.find(x => !x.res.B.ok) || x0).opts; return `<h4 style="margin:4px 0 6px">With a ${op.sacT} mm sacrificial ply added [ ]</h4><div class="tbl"><table>${head}${optRows(op.A, 'A')}</table></div>
+    <h4 style="margin:14px 0 6px">Without a sacrificial ply</h4><div class="tbl"><table>${head}${optRows(op.B, 'B')}</table></div>`; })()}
+  </div>
+  ${R.type === 'rimflow' && chanSteps(x0, c).length ? `<div class="card"><div class="card-h"><h3>Depth of glass into the channel</h3><span class="muted">${fmt0(x0.frame.find(f => f.type === 'C').D)} mm embedment</span></div><ol class="csteps">${chanSteps(x0, c).map(([t, s]) => `<li><b>${t}</b><div class="eq">${s}</div></li>`).join('')}</ol></div>` : ''}
+  <div class="card"><div class="card-h"><h3>Course method comparison</h3><button type="button" class="small" id="btnCourse">Use course inputs</button></div>${compareTable(R, false)}</div>
+  <div class="card"><div class="card-h"><h3>Recommendations</h3></div><ol class="sugg">${R.sugg.map(s => `<li>${s}</li>`).join('')}</ol></div>`;
+  $('#legendSlot').appendChild(legendCanvas());
+  drawFEA();
+}
+function drawFEA() {
+  const cv = $('#feaCanvas'); if (!cv) return;
+  const x = R.panels[feaPanel] || R.panels[0];
+  const r = feaMode === '3d' ? plot3D(cv, x, R.c, isDark()) : plotField(cv, x, feaMode, R.c, isDark());
+  $('#legendMax').textContent = `${fmt(r.vmax)} ${feaMode === 's' ? 'MPa' : 'mm'}`;
+}
+$('#results').addEventListener('click', e => {
+  const m = e.target.closest('[data-mode]'); if (m) { feaMode = m.dataset.mode; document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', b === m)); drawFEA(); return; }
+  const pb = e.target.closest('[data-panel]'); if (pb) { feaPanel = +pb.dataset.panel; renderResults(); return; }
+  if (e.target.id === 'btnCourse') {
+    const c = S[S.type]; if (c.glass === 'AN') { c.strengthMode = 'custom'; c.fCustom = 7.0; } c.nominalThk = true; c.overflowOn = false;
+    renderRail(); compute(); toast(c.glass === 'AN' ? 'Course inputs set: 7.0 MPa, nominal thickness, no overflow' : 'Course inputs set: nominal thickness, no overflow (strength kept for this glass type)'); return;
+  }
+  const u = e.target.closest('[data-use]'); if (u) {
+    const c = S[S.type]; c.plies = u.dataset.use.split(',').map(Number); c.sacT = +(u.dataset.sac || 0);
+    renderRail(); compute(); toast(`Make-up set to ${makeupText(c)} mm`);
+  }
+});
+function compareTable(R, rep) {
+  const c = R.c;
+  const rows = R.panels.map(x => {
+    const k = x.course, fea = Math.sqrt(6 * x.res.Md / R.sp.f);
+    return `<tr><td>${esc(x.p.name)}</td><td class="n">${k ? fmt(k.treq, 2) : '–'}${k && k.pilk ? ` / ${fmt(k.pilk, 2)}` : ''}</td><td class="n">${x.hand.M !== null ? fmt(x.hand.treq, 2) : '–'}</td><td class="n">${fmt(fea, 2)}</td><td class="n">${k ? `${fmt(k.eqNow, 1)} ${k.ok ? '✓' : '✗'}` : '–'}</td><td class="n">${k ? k.opts.map(o => o.plies.join('×')).join(', ') : '–'}</td></tr>`;
+  }).join('');
+  const why = [];
+  if (R.type === 'vertical') why.push('The course Roark method takes the whole pressure as a triangle starting at zero. The water above the window adds a uniform pressure over the full height, which the hand and FEA methods include. The course spreadsheet formula (second value) uses the glass height only.');
+  if (R.type === 'flat') why.push('The course notes use β = 0.453 (the Roark value for a/b = 1.4) for their 1000 × 800 example; the correct a/b = 1.25 value is lower.');
+  if (R.type === 'rimflow') why.push('The course applies a uniform pressure with β = 0.866. The calculator applies the true triangular pressure over the full height with a clamped base, as in the course’s own cantilever check, and that governs.');
+  const bits = [c.nominalThk ? 'nominal thickness' : 'SANS 50572 minimum thickness (12 mm is taken as 11.7 mm)', c.strengthMode === 'custom' ? `a design stress of ${fmt(R.sp.f, 2)} MPa` : `the EN 16612 strength of ${fmt(R.sp.f, 2)} MPa`];
+  if (R.type !== 'tank') bits.push('spans to the middle of the edge bearing');
+  if (c.overflowOn) bits.push('the overflow level');
+  why.push(`The calculator uses ${bits.slice(0, -1).join(', ')} and ${bits[bits.length - 1]}. The course uses 7.0 MPa, nominal thickness and the visible glass size.`);
+  return `<div class="tbl"><table><tr><th>Panel</th><th>Course t mm</th><th>Hand (Roark) t mm</th><th>FEA t mm</th><th>Your make-up √Σt² mm</th><th>Course laminate options</th></tr>${rows}</table></div>
+    <ul class="muted" style="font-size:12.5px;margin:8px 0 0;padding-left:18px">${why.map(w => `<li>${w}</li>`).join('')}</ul>${rep ? '' : '<div class="muted" style="font-size:12.5px;margin-top:6px">Required equivalent monolithic thickness from each method. The pass or fail verdicts above use the FEA. “Use course inputs” sets 7.0 MPa, nominal thickness and no overflow so the FEA runs on the same basis as the course.</div>'}`;
+}
+// Step-by-step working for glass clamped in a channel (rim-flow bottom edge)
+function chanSteps(x, c) {
+  const e = x.frame.find(f => f.type === 'C'); if (!e) return [];
+  const p = x.p, h = p.b, qT = Math.max(0, p.qTop), dq = p.qBot - qT, rho = c.water === 'sea' ? 1040 : c.water === 'custom' ? c.rho : 1000;
+  const Mc = (qT * h * h / 2 + dq * h * h / 6) * c.gF, Vc = (qT * h + dq * h / 2) * c.gF;
+  const pp = c.pPad, A = 0.1875 * pp, B = 0.875 * e.V, D = e.D;
+  const Fb = e.Ftop - e.V;
+  return [
+    ['Water load on the glass', `Water depth at the support line = glass height above it ${fmt0(h)} mm${p.cant ? '' : ` (${fmt0(c.freeH)} + half the ${fmt0(c.cover)} mm cover)`} + flow over the top ${fmt0(c.weir)} mm${c.extraHead ? ` + extra head ${fmt0(c.extraHead)} mm` : ''} = ${fmt0(p.hw)} mm\nq at channel = ρ·g·h = ${rho} × 9.81 × ${fmt(p.hw / 1000, 3)} = ${fmt(p.qBot * 1e6, 0)} Pa = ${fmt(p.qBot, 5)} N/mm²\nq at top edge = ${fmt(qT * 1e6, 0)} Pa (triangular load${qT > 0 ? ' plus a uniform part from the water over the top' : ''})`],
+    ['Moment and shear at the channel mouth (per mm run)', `Cantilever check, full strip: M = (q₀·h²/2 + Δq·h²/6)·γF = (${fmt(qT, 5)} × ${fmt0(h)}²/2 + ${fmt(dq, 5)} × ${fmt0(h)}²/6) × ${fmt(c.gF, 2)} = ${fmt(Mc, 1)} N·mm/mm\n                          V = (q₀·h + Δq·h/2)·γF = ${fmt(Vc, 2)} N/mm\nFEA peak along the channel (used): M = ${fmt(e.M, 1)} N·mm/mm, V = ${fmt(e.V, 2)} N/mm${e.M < 0.95 * Mc ? '  (lower than the strip because the end supports carry part of the load)' : e.M > 1.02 * Mc || e.V > 1.05 * Vc ? '  (peak values along the edge, higher near the panel ends)' : '  (matches the strip: the panel is long, so the end supports help little at mid-length)'}`],
+    ['Pad arrangement', `Two pads (setting blocks / grout packers) on opposite faces, each D/4 high:\n top pad at the channel mouth on the dry side, centroid D/8 below the mouth\n bottom pad at the channel base on the water side, centroid 7D/8 below the mouth\nLever arm between pad centroids z = 7D/8 − D/8 = 0.75·D`],
+    ['Equilibrium', `Moments about the bottom pad: F_top·0.75D = M + V·0.875D  →  F_top = (M + 0.875·V·D) / (0.75·D)\nForces: F_bottom = F_top − V\nPad bearing: σ_b = F_top / (D/4) ≤ p_allow = ${fmt(pp, 2)} MPa`],
+    ['Solve for the embedment D', `(M + 0.875·V·D) / (0.75·D) ÷ (0.25·D) ≤ p  →  0.1875·p·D² − 0.875·V·D − M ≥ 0\n${fmt(A, 4)}·D² − ${fmt(B, 3)}·D − ${fmt(e.M, 1)} = 0\nD = [0.875V + √((0.875V)² + 0.75·p·M)] / (0.375·p)\n  = [${fmt(B, 3)} + √(${fmt(B, 3)}² + 0.75 × ${fmt(pp, 2)} × ${fmt(e.M, 1)})] / (0.375 × ${fmt(pp, 2)}) = ${fmt(e.Dc, 1)} mm`],
+    ['Embedment used and check', `D = max(minimum ${fmt0(c.Dmin)}, calculated ${fmt(e.Dc, 1)}) = ${fmt0(D)} mm\nF_top = (${fmt(e.M, 1)} + 0.875 × ${fmt(e.V, 2)} × ${fmt0(D)}) / (0.75 × ${fmt0(D)}) = ${fmt(e.Ftop, 2)} N/mm;  F_bottom = ${fmt(Fb, 2)} N/mm\nPad bearing = ${fmt(e.Ftop, 2)} / (${fmt0(D)}/4) = ${fmt(e.bearing, 3)} MPa ≤ ${fmt(pp, 2)} MPa → OK\nPad height = D/4 = ${fmt(D / 4, 0)} mm each`],
+    ['Channel size', `Channel width = glass ${fmt(x.res.tFull, 1)} mm + 2 × pad ${fmt0(c.padT)} mm = ${fmt0(e.chanW)} mm\nChannel depth = D + setting block / clearance ${fmt0(c.clear)} mm = ${fmt0(D + c.clear)} mm\nGlass cut height = ${fmt0(c.freeH)} above + ${fmt0(D)} embedded = ${fmt0(c.freeH + D)} mm`]
+  ];
+}
+function sizesTable(R) {
+  const c = R.c, rows = [];
+  for (const x of R.panels) {
+    const p = x.p, fr = x.frame;
+    if (R.type === 'tank') { rows.push([x.p.name, `${fmt0(p.glassW)} × ${fmt0(p.glassH)}`, `${fmt(x.res.tFull, 1)} mm`, 'Silicone-bonded edges', '–']); continue; }
+    let size = p.glassH ? `${fmt0(p.glassW)} × ${fmt0(p.glassH)}` : `${fmt0(p.glassW)} × ${fmt0(c.freeH + (fr.find(e => e.side === 'bottom')?.D || c.cover))}`;
+    const fdesc = fr.map(e => e.type === 'C' ? `${e.side}: embed ${fmt0(e.D)} in ${fmt0(e.chanW)} channel` : `${e.side}: cover ${fmt0(c.cover)} (min ${fmt0(e.req)}), rebate ${fmt0(e.rebate)} × ${fmt0(e.rebateW)}`).join('<br>');
+    rows.push([x.p.name, size, `${fmt(x.res.tFull, 1)} mm`, fdesc, `${fmt0(p.a)} × ${fmt0(p.b)}`]);
+  }
+  return `<div class="tbl" style="margin-top:12px"><table><tr><th>Panel</th><th>Glass cut size</th><th>Thickness</th><th>Into the frame</th><th>Analysis span</th></tr>${rows.map(r => `<tr>${r.map((v, i) => `<td class="${i === 1 || i === 2 || i === 4 ? 'n' : ''}">${v}</td>`).join('')}</tr>`).join('')}</table></div>`;
+}
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => R && drawFEA());
+
+// ---------- report ----------
+function renderReport() {
+  const c = R.c, pj = S.project, P = R.panels; let sn = 0;
+  const step = (body) => `<div class="step"><div class="sn">${String(++sn).padStart(2, '0')}</div><div>${body}</div></div>`;
+  const eq = s => `<div class="eq">${s}</div>`;
+  const sec = (no, title, inner) => `<section class="rsec"><h2><span class="no">${no}</span>${title}</h2>${inner}</section>`;
+  const rho = c.water === 'sea' ? 1040 : c.water === 'custom' ? c.rho : 1000;
+  let h = `<div class="rep-head"><div><div class="eyebrow">Glass design calculation · ${TYPES[R.type].label}</div><h1 style="font-size:28px">${esc(pj.project || 'Pool glass design')}</h1></div>
+    <div class="meta"><span class="muted">Client</span><span>${esc(pj.client || '–')}</span><span class="muted">Site</span><span>${esc(pj.site || '–')}</span><span class="muted">Designed by</span><span>${esc(pj.engineer || '–')}</span><span class="muted">Reference</span><span>${esc(pj.ref || '–')}</span><span class="muted">Date</span><span>${esc(pj.date || '')}</span></div></div>`;
+  // 1 basis
+  h += sec('1', 'Design basis', `<p>Glass under sustained water load is designed to SANS 10137:2011 §6.8 (fish tanks and underwater observation panels), with the glass strength model of EN 16612:2019 for a 50-year load, plate coefficients from Roark’s Formulas for Stress and Strain (7th ed., Table 11.4), laminated glass behaviour per Button & Pye (1993) and Bennison (DuPont), and a linear finite-element plate model. Loads follow SANS 10137 §6.8.2: P = ρ·g·h, depth measured from the water surface.</p>
+    <div class="tbl"><table><tr><th>Input</th><th>Value</th></tr>${reportInputs(R).map(([a, b]) => `<tr><td>${a}</td><td class="n">${b}</td></tr>`).join('')}</table></div>`);
+  // 2 geometry & drawings
+  h += sec('2', 'Geometry, sizes and drawings', `${sizesTable(R)}<div class="rep-imgs"><img alt="Arrangement drawing" src="${svgURI(drawElevation(R, PAL_PRINT, 'p'))}"><img alt="Edge detail" src="${svgURI(drawSection(R, PAL_PRINT, 'p'))}"></div>
+    <p class="muted">Analysis spans run between the support lines, taken at mid-bearing: daylight size + edge cover${R.type === 'tank' ? ' (tank panels use the glass size)' : ''}.</p>`);
+  // 3 loads
+  let lh = '';
+  for (const x of P) {
+    const p = x.p;
+    lh += `<h3>${esc(p.name)}</h3>`;
+    if (p.kind === 'hydro') {
+      if (R.type === 'vertical') {
+        lh += step(`Normal water surface: ${fmt0(c.normAbove)} mm above the top of the glass → ${fmt0(p.normalHw)} mm above the bottom support line.` + (c.overflowOn ? ` Overflow surface: ${fmt0(c.ovAbove)} mm above the top → ${fmt0(p.overHw)} mm. The ${p.governing} level governs.` : ''));
+        if (c.extraHead) lh += step(`Extra head for swimmers or surge: + ${fmt0(c.extraHead)} mm.`);
+      } else if (R.type === 'rimflow') lh += step(`Water flows ${fmt0(c.weir)} mm over the top edge. Head at the support line = ${fmt0(p.b)} + ${fmt0(c.weir)}${c.extraHead ? ' + ' + fmt0(c.extraHead) : ''} = ${fmt0(p.hw)} mm.`);
+      else lh += step(`Water height ${fmt0(p.hw)} mm on a panel ${fmt0(p.b)} mm high.`);
+      lh += step(`Pressure at the bottom support: ${eq(`P = ρ·g·h = ${rho} × 9.81 × ${fmt(p.hw / 1000, 3)} = ${fmt(p.qBot * 1e6, 0)} Pa = ${fmt(p.qBot * 1000, 3)} kPa`)}`);
+      lh += step(`Pressure at the top ${p.edges.top === 'F' ? 'free edge' : 'support'}: ${eq(`P = ${rho} × 9.81 × ${fmt(Math.max(0, p.hw - p.b) / 1000, 3)} = ${fmt(Math.max(0, p.qTop) * 1e6, 0)} Pa`)} The load is ${p.qTop > 0 ? 'trapezoidal' : 'triangular from the water surface'} over the height and is applied to the FEA model exactly (SANS 10137 Figure 27).`);
+    } else {
+      lh += step(`Water pressure: ${eq(`P = ρ·g·h = ${rho} × 9.81 × ${fmt(p.depth / 1000, 3)} = ${fmt(p.qw * 1e6, 0)} Pa`)}`);
+      lh += step(`Self weight of glass (${fmt(x.res.tNom, 1)} mm): ${eq(`${p.sw(1) ? `2.5 × 9.81 × ${fmt(x.res.tNom, 1)} = ${fmt(p.sw(x.res.tNom) * 1e6, 0)} Pa` : 'not included'}`)}${p.qi ? `Imposed load ${fmt(p.qi * 1000, 2)} kPa.` : ''}`);
+      lh += step(`Total uniform load q = ${fmt(x.res.sc * 1e6, 0)} Pa = ${fmt(x.res.sc * 1000, 3)} kPa.`);
+    }
+  }
+  lh += step(`Load factor γF = ${fmt(c.gF, 2)} applied to stresses and frame forces. Deflections use unfactored loads.`);
+  h += sec('3', 'Water loads', lh);
+  // 4 strength
+  h += sec('4', 'Glass design strength', step(`Glass: ${GLASS[c.glass].name}. Characteristic strength fg,k = 45 MPa${c.glass !== 'AN' ? `, prestressed fb,k = ${GLASS[c.glass].fbk} MPa` : ''}. Water load is permanent, so strength is reduced for static fatigue (SANS 10137 §6.8.2.3).`) +
+    step(`Permanent load, 50 years = ${fmt0(HOURS_50Y)} h: ${eq(R.sp.text)}`) +
+    step(`Post-breakage period, ${fmt0(c.repDays)} days = ${fmt0(c.repDays * 24)} h: ${eq(R.st.text)}`) +
+    step(`For comparison: the course uses 7.0 MPa for annealed glass under water, and the AQUA spreadsheet uses f = 7 358 kPa, the same value as the EN 16612 model above.`));
+  // 5 effective thickness
+  const x0 = P[0], r0 = x0.res, e = r0.intact;
+  let et = step(`Structural make-up ${c.plies.join(' + ')} mm nominal → ${c.nominalThk ? 'nominal thickness used (course method)' : `minimum thickness ${r0.hmin.join(' + ')} mm (SANS 50572 tolerances)`}${c.plies.length > 1 ? `, interlayer ${fmt(c.inter, 2)} mm ${esc(c.interType)}, ω = ${fmt(c.omega, 2)}` : ''}.`);
+  if (c.plies.length > 1) {
+    et += step(`Deflection effective thickness: ${eq(`h_ef,w = ( Σhᵢ³ + 12·ω·Σhᵢ·zᵢ² )^(1/3) = ( ${fmt(e.s3, 0)} + 12 × ${fmt(c.omega, 2)} × ${fmt(e.sz, 0)} )^(1/3) = ${fmt(e.hw, 2)} mm`)}`);
+    et += step(`Stress effective thickness of each ply: ${eq(e.hsi.map((v, i) => `h_ef,σ,${i + 1} = √( h_ef,w³ / (h${i + 1} + 2ω|z${i + 1}|) ) = √( ${fmt(e.hw3, 0)} / (${fmt(r0.hmin[i], 1)} + 2 × ${fmt(c.omega, 2)} × ${fmt(Math.abs(e.z[i]), 2)}) ) = ${fmt(v, 2)} mm`).join('\n'))} Governing (smallest) h_ef,σ = ${fmt(e.hs, 2)} mm.`);
+    et += step(`Check against the course layered factor (stress: √Σt²): ${eq(`√(${r0.hmin.map(v => fmt(v, 1) + '²').join(' + ')}) = ${fmt(e.course, 2)} mm`)} ${c.omega === 0 && new Set(r0.hmin).size === 1 ? 'Same as the value above for equal plies.' : 'The EN method above is used (it accounts for unequal plies and ω).'}`);
+    if (r0.B.post) et += step(`Without a sacrificial ply, worst single broken ply (ply ${r0.B.post.k + 1}, ω = 0): h_ef,w = ${fmt(r0.B.post.eff.hw, 2)} mm, h_ef,σ = ${fmt(r0.B.post.eff.hs, 2)} mm.`);
+  } else et += step(`Monolithic: h_ef,w = h_ef,σ = ${fmt(e.hw, 2)} mm.`);
+  if (r0.A) {
+    const A = r0.A;
+    et += step(`With the ${A.sacT} mm sacrificial ply added (${makeupText(c)} mm, ${fmt(A.tNom, 1)} mm total): all plies intact, ω = ${fmt(c.omega, 2)} → h_ef,w = ${fmt(A.intact.eff.hw, 2)} mm, h_ef,σ = ${fmt(A.intact.eff.hs, 2)} mm. This is stiffer and stronger than the structural plies alone.`);
+    et += step(`Sacrificial ply broken (ω = 0): the structural plies alone → h_ef,w = ${fmt(A.broken.eff.hw, 2)} mm, h_ef,σ = ${fmt(A.broken.eff.hs, 2)} mm.`);
+    if (A.post) et += step(`Sacrificial ply intact but structural ply ${A.post.k + 1} broken (ω = 0): h_ef,w = ${fmt(A.post.eff.hw, 2)} mm, h_ef,σ = ${fmt(A.post.eff.hs, 2)} mm.`);
+  }
+  h += sec('5', 'Effective thickness of the laminate', et);
+  // 6 hand calc
+  let hc = '';
+  for (const x of P) {
+    hc += `<h3>${esc(x.p.name)} – ${esc(x.hand.method)}</h3>`;
+    x.hand.steps.forEach(s => { hc += step(eq(s)); });
+    if (x.hand.M !== null) hc += step(`Required equivalent monolithic thickness from the hand method: t = √(6·γF·M/f) = √(6 × ${fmt(c.gF, 2)} × ${fmt(x.hand.M, 1)} / ${fmt(R.sp.f, 2)}) = ${fmt(x.hand.treq, 2)} mm.`);
+  }
+  hc += `<h3>Course method – Nick Wright, SAGI Underwater Glazing 2024</h3>`;
+  for (const x of P) {
+    const k = x.course; if (!k) continue;
+    if (P.length > 1) hc += `<h4>${esc(x.p.name)}</h4>`;
+    k.steps.forEach(s => { hc += step(eq(s)); });
+    if (k.note) hc += step(k.note);
+  }
+  hc += compareTable(R, true);
+  h += sec('6', 'Hand calculation', hc + `<p class="muted">Roark coefficients are for ν = 0.3; the FEA uses ν = ${fmt(c.nu, 2)}.</p>`);
+  // 7 FEA
+  let fh = '';
+  for (const x of P) {
+    const f = x.fea, r = x.res;
+    fh += `<h3>${esc(x.p.name)}</h3>`;
+    fh += step(`Model: ${fmt0(f.a)} × ${fmt0(f.b)} mm plate, ${f.nx} × ${f.ny} MITC4 Mindlin plate elements, ${f.ndof} degrees of freedom, banded Cholesky solution. Supports: bottom ${edgeName(x.p.edges.bottom)}, top ${edgeName(x.p.edges.top)}, left ${edgeName(x.p.edges.left)}, right ${edgeName(x.p.edges.right)}. E = ${c.E} MPa, ν = ${c.nu}.`);
+    fh += step(`Equilibrium check: applied load ${fmt(f.Fz * r.sc / 1000, 3)} kN, support reactions ${fmt(-f.Rz * r.sc / 1000, 3)} kN.`);
+    fh += step(`Peak principal bending moment M = ${fmt(r.M, 1)} N·mm/mm at x = ${fmt0(f.mAt[0])}, y = ${fmt0(f.mAt[1])} mm. Design: ${eq(`σ = 6·γF·M / h_ef,σ² = 6 × ${fmt(c.gF, 2)} × ${fmt(r.M, 1)} / ${fmt(r.intact.hs, 2)}² = ${fmt(r.sIntact, 2)} MPa`)}`);
+    fh += step(`Peak deflection: ${eq(`w = w_ref·(t_ref/h_ef,w)³ = ${fmt(Math.abs(f.wmax) * r.sc, 3)} × (${fmt(f.tref, 2)}/${fmt(r.intact.hw, 2)})³ = ${fmt(r.wIntact, 2)} mm  at x = ${fmt0(f.wAt[0])}, y = ${fmt0(f.wAt[1])}`)}`);
+    if (r.topVarIntact !== null) fh += step(`Top free edge: deflection variation along the edge = ${fmt(r.topVarIntact, 2)} mm (intact).`);
+    if (x.hand.M !== null) fh += step(`FEA against hand method: moment ${fmt(r.M, 1)} vs ${fmt(x.hand.M, 1)} N·mm/mm (${fmt(100 * (r.M / x.hand.M - 1), 1)}%).`);
+    fh += `<div class="rep-imgs"><img alt="Deflection contour" src="${feaImg(x, 'w')}"><img alt="Stress contour" src="${feaImg(x, 's')}"></div>`;
+  }
+  const ff = R.coarse, f0 = P[0].fea;
+  fh += step(`Mesh convergence (${esc(P[0].p.name)}): coarse mesh ${ff.nx} × ${ff.ny} gives M = ${fmt(Math.abs(ff.mmax) * P[0].res.sc, 1)} and w_ref = ${fmt(Math.abs(ff.wmax) * P[0].res.sc, 2)}; design mesh ${f0.nx} × ${f0.ny} gives M = ${fmt(Math.abs(f0.mmax) * P[0].res.sc, 1)} and w_ref = ${fmt(Math.abs(f0.wmax) * P[0].res.sc, 2)} (change ${fmt(100 * (Math.abs(f0.mmax) / Math.abs(ff.mmax) - 1), 1)}% and ${fmt(100 * (Math.abs(f0.wmax) / Math.abs(ff.wmax) - 1), 1)}%).`);
+  fh += step(`Verification of the solver against Roark Table 11.4 (ν = 0.3): case 1a a/b = 1: β 0.286 (Roark 0.2874), α 0.0444 (0.0444); case 1e a/b = 2: β 0.316 (0.32); case 2a a/b = 1: β 0.668 (0.67); cantilever strip M = qh²/6 within 0.5%. The analysis is linear (small deflection); membrane action would reduce stresses in 4-edge supported glass.`);
+  h += sec('7', 'Finite-element analysis', fh);
+  // 8 checks
+  let ch = '';
+  for (const x of P) {
+    const r = x.res;
+    const rows = [];
+    if (r.A) {
+      const A = r.A;
+      rows.push(['With sacrificial ply – all plies intact (for information)', `σ = ${fmt(A.sIntact)} MPa, w = ${fmt(A.wIntact)} mm`, true],
+        ['With sacrificial ply – sacrificial broken, stress', `${fmt(A.s)} ≤ ${fmt(R.sp.f)} MPa`, A.okS], ['With sacrificial ply – sacrificial broken, deflection', `${fmt(A.w)} ≤ ${fmt(r.limit)} mm`, A.okW]);
+      if (A.topVar !== null && c.topLimitOn) rows.push(['With sacrificial ply – sacrificial broken, top edge variation', `${fmt(A.topVar)} ≤ ${fmt(c.topLimit)} mm`, A.okTop]);
+      rows.push(['With sacrificial ply – a structural ply broken, ' + fmt0(c.repDays) + ' days', A.post ? `${fmt(A.post.s)} ≤ ${fmt(R.st.f)} MPa (ply ${A.post.k + 1} broken)` : '–', A.okPost]);
+      if (A.mono) rows.push(['With sacrificial ply – structural glass is laminated', 'one structural ply only', !!c.allowMono]);
+      rows.push(['With sacrificial ply – deflection vs half the glass thickness (warning)', `${fmt(A.w)} ≤ ${fmt(A.tNom / 2, 1)} mm`, A.warnHalf ? 'warn' : true]);
+    }
+    rows.push(['Without sacrificial ply – stress (all plies)', `${fmt(r.B.s)} ≤ ${fmt(R.sp.f)} MPa`, r.B.okS], ['Without sacrificial ply – deflection', `${fmt(r.B.w)} ≤ ${fmt(r.limit)} mm`, r.B.okW], ['Without sacrificial ply – deflection vs half the glass thickness (warning)', `${fmt(r.B.w)} ≤ ${fmt(r.halfT, 1)} mm`, r.largeDefl ? 'warn' : true]);
+    if (r.topVarIntact !== null && c.topLimitOn) rows.push(['Without sacrificial ply – top edge variation', `${fmt(r.topVarIntact)} ≤ ${fmt(c.topLimit)} mm`, r.B.okTop]);
+    rows.push(['Without sacrificial ply – one ply broken, ' + fmt0(c.repDays) + ' days', r.B.post ? `${fmt(r.B.post.s)} ≤ ${fmt(R.st.f)} MPa (ply ${r.B.post.k + 1} broken)` : (r.B.monoAllowed ? 'monolithic, permitted for small tanks' : 'monolithic – no residual capacity'), r.B.okPost]);
+    ch += `<h3>${esc(x.p.name)}</h3>` + step(`Deflection limit: ${limitText(x, c)}. The limit is compared with the largest deflection anywhere on the pane, under unfactored water load.`) +
+      (R.type === 'rimflow' ? step(`Deflection when the glass reaches its design stress (linear): ${eq(`w_f = w × f / σ = ${fmt(r.B.w, 2)} × ${fmt(R.sp.f, 2)} / ${fmt(r.B.s, 2)} = ${fmt(r.B.w * R.sp.f / r.B.s, 2)} mm (all plies)` + (r.A ? `\nw_f = ${fmt(r.A.w, 2)} × ${fmt(R.sp.f, 2)} / ${fmt(r.A.s, 2)} = ${fmt(r.A.w * R.sp.f / r.A.s, 2)} mm (sacrificial ply broken – same plies as without)` : ''))}`) : '') +
+      `<div class="tbl"><table><tr><th>Check</th><th>Result</th><th>Status</th></tr>${rows.map(([a, b, ok]) => `<tr><td>${a}</td><td class="n">${b}</td><td>${pill(ok)}</td></tr>`).join('')}</table></div>`;
+  }
+  ch += `<p><b>Overall:</b> with sacrificial ply ${R.hasA ? pill(R.okA) : pill(null)} · without sacrificial ply ${pill(R.okB)}</p>`;
+  h += sec('8', 'Design checks', ch);
+  // 9 frame
+  let fr = '';
+  for (const x of P) {
+    if (R.type === 'tank') {
+      const rs = ['left', 'bottom'].map(sd => x.fea.edgeR[sd].peak * x.res.sc * c.gF);
+      fr += `<h3>${esc(x.p.name)}</h3>` + step(`Peak line reaction into the silicone joints: vertical joints ${fmt(rs[0], 2)} N/mm, base joint ${fmt(rs[1], 2)} N/mm. With a bead as wide as the glass (${fmt(x.res.tNom, 1)} mm) the joint stress is ${fmt(Math.max(...rs) / x.res.tNom, 3)} MPa, against a silicone tensile strength of at least 1 MPa (SANS 10137 §6.8.3.1).`);
+      continue;
+    }
+    fr += `<h3>${esc(x.p.name)}</h3>`;
+    for (const e2 of x.frame) {
+      if (e2.type === 'S') fr += step(`${cap(e2.side)} edge, simply supported in a rebate. Peak line reaction R = ${fmt(e2.R, 2)} N/mm (design). ${eq(`Bearing width = R / p_allow = ${fmt(e2.R, 2)} / ${fmt(c.pAllow, 2)} = ${fmt(e2.bear, 1)} mm (+ 5 mm seal)\nEdge pull-in = π²·w²/(8·L) = ${fmt(e2.pull, 2)} mm (+ 15 mm)\nRequired cover = max(${fmt0(c.cMin)}, ${fmt(e2.bear + 5, 1)}, ${fmt(e2.pull + 15, 1)}) = ${fmt(e2.req, 1)} mm\nCover used = ${fmt0(c.cover)} mm → ${e2.ok ? 'OK' : 'INCREASE'}\nRebate depth = cover + edge clearance = ${fmt0(c.cover)} + ${fmt0(c.clear)} = ${fmt0(e2.rebate)} mm\nRebate width = glass ${fmt(x.res.tFull, 1)} + 2 × ${fmt0(c.sideClear)} = ${fmt0(e2.rebateW)} mm`)}`);
+      else fr += step(`${cap(e2.side)} edge, clamped in a channel. Forces come from the FEA support reactions at the bottom edge, with a cantilever strip check.`) + chanSteps(x, c).map(([t, s]) => step(`<b>${t}</b>${eq(s)}`)).join('');
+    }
+  }
+  h += sec('9', R.type === 'tank' ? 'Silicone joints' : 'Depth of glass into the frame', fr);
+  // 10 options
+  let oh = '';
+  for (const x of P) {
+    oh += `<h3>${esc(x.p.name)}</h3><div class="tbl"><table><tr><th>Scenario</th><th>Make-up (mm)</th><th>Total</th><th>kg/m²</th><th>σ / f</th><th>Deflection</th></tr>` +
+      x.opts.A.map(r => `<tr><td>With sacrificial</td><td class="n">${c.sacPos === 'water' ? `[${r.A.sacT}] + ${r.plies.join(' + ')}` : `${r.plies.join(' + ')} + [${r.A.sacT}]`}</td><td class="n">${fmt(r.A.tNom, 1)}</td><td class="n">${fmt0(r.A.weight)}</td><td class="n">${fmt(r.A.s)} / ${fmt(R.sp.f)}</td><td class="n">${fmt(r.A.w)}</td></tr>`).join('') +
+      x.opts.B.map(r => `<tr><td>Without sacrificial</td><td class="n">${r.plies.join(' + ')}</td><td class="n">${fmt(r.tNom, 1)}</td><td class="n">${fmt0(r.weight)}</td><td class="n">${fmt(r.B.s)} / ${fmt(R.sp.f)}</td><td class="n">${fmt(r.B.w)}</td></tr>`).join('') + `</table></div>`;
+  }
+  h += sec('10', 'Options', `<p>Lightest make-ups that pass every check with the current glass type (${GLASS[c.glass].name}), interlayer and supports. [ ] marks the sacrificial ply, added over and above the structural plies.</p>` + oh);
+  h += sec('11', 'Recommendations', `<ol class="sugg">${R.sugg.map(s => `<li>${s}</li>`).join('')}</ol>`);
+  h += sec('12', 'Limitations and sign-off', `<p>This report gives engineering guidance from published methods and a linear plate model. It does not cover impact, seismic, thermal stress, the supporting structure, sealant durability or manufacturing quality. It must be checked and signed by a registered professional engineer or competent person (glazing) before use. Sources: SANS 10137:2011; SANS 10400-A, -B, -N; EN 16612:2019; Roark’s Formulas for Stress and Strain, 7th ed.; Button & Pye, Glass in Building (1993); Bennison & Gizzi, Structural Properties of Laminated Glass (DuPont, 2007); SAGI Underwater Glazing course notes (2024); AQUA and HL aquarium spreadsheets.</p>
+    <div class="signoff"><div>Competent person (glazing) – name, registration no., signature</div><div>Registered professional engineer – name, registration no., signature</div></div>`);
+  $('#report').innerHTML = h;
+}
+const cap = s => s[0].toUpperCase() + s.slice(1);
+function limitText(x, c) {
+  const r = x.res, ratio = `${fmt0(x.p.spanShort)} ÷ ${fmt0(c.defRatio > 0 ? c.defRatio : 250)} = ${fmt(r.byRatio)} mm (span = ${x.p.spanLabel})`;
+  return r.limitBy === 'abs' ? `<b>${fmt(r.limit)} mm</b> entered override (replaces ${ratio})` : `<b>${fmt(r.limit)} mm</b> from ${ratio}`;
+}
+const edgeName = e => ({S: 'simply supported', C: 'clamped', F: 'free'})[e];
+function reportInputs(R) {
+  const c = R.c, out = [];
+  const g = GEOM[R.type];
+  for (const f of g) if (!f.show || f.show(c)) out.push([f.label, f.kind === 'chk' ? (c[f.k] ? 'yes' : 'no') : f.kind === 'sel' ? (f.opts.find(o => o[0] === String(c[f.k]))?.[1] || c[f.k]) : `${c[f.k]} ${f.unit || ''}`]);
+  out.push(['Water density', `${c.water === 'sea' ? 1040 : c.water === 'custom' ? c.rho : 1000} kg/m³`], ['Glass type', GLASS[c.glass].name], ['Structural plies (ply 1 water side)', `${c.plies.join(' + ')} mm`], ['Interlayer', `${c.interType} ${c.inter} mm, ω = ${c.omega}`],
+    ['Sacrificial ply (extra)', c.sacT > 0 ? `${c.sacT} mm on the ${c.sacPos} side` : 'none'], ['Load factor γF', c.gF], ['Deflection limit', c.defAbs > 0 ? `${c.defAbs} mm (override)` : `span ÷ ${c.defRatio || 250}`], ['Replacement period', `${c.repDays} days`]);
+  if (R.type !== 'tank') out.push(['Edge cover used / minimum', `${c.cover} / ${c.cMin} mm`], ['Edge clearance', `${c.clear} mm`]);
+  return out;
+}
+function svgURI(svg) { const m = svg.match(/viewBox="0 0 (\d+(?:\.\d+)?) (\d+(?:\.\d+)?)"/); const wh = m ? `width="${m[1]}" height="${m[2]}" ` : ''; return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg.replace('<svg ', `<svg xmlns="http://www.w3.org/2000/svg" ${wh}`)); }
+function feaImg(x, mode) { const cv = document.createElement('canvas'); plotField(cv, x, mode, R.c, false); const ctx = cv.getContext('2d'); ctx.fillStyle = '#13272a'; ctx.font = '13px JetBrains Mono, monospace'; ctx.fillText(mode === 'w' ? 'Deflection (mm)' : 'Principal stress, governing ply (MPa)', 34, 22); return cv.toDataURL('image/png'); }
+
+// ---------- export: PDF, print, email, share, design code ----------
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(t._h); t._h = setTimeout(() => { t.hidden = true; }, 2600); }
+const framed = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+if (!framed) $('#btnPrint').hidden = false;
+$('#btnPrint').addEventListener('click', () => window.print());
+function summaryText() {
+  const c = R.c, x = R.panels[0];
+  const lines = [`${S.project.project} – ${TYPES[R.type].label}`, `Ref ${S.project.ref}, ${S.project.date}`, '',
+    `Glass: ${GLASS[c.glass].name}, ${makeupText(c)} mm ${fullMakeup(c).plies.length > 1 ? c.interType : ''} (${fmt(x.res.tFull, 1)} mm total${c.sacT > 0 ? ', [ ] = sacrificial ply' : ''})`,
+    `Design strength: ${fmt(R.sp.f)} MPa (50-year load)`];
+  for (const y of R.panels) lines.push(`${y.p.name}: stress ${fmt(y.res.B.s)} MPa, deflection ${fmt(y.res.B.w)} mm (limit ${fmt(y.res.limit)} mm)`);
+  lines.push(`With sacrificial ply: ${R.hasA ? (R.okA ? 'PASS' : 'FAIL') : 'n/a'}`, `Without sacrificial ply: ${R.okB ? 'PASS' : 'FAIL'}`);
+  for (const e of x.frame) lines.push(e.type === 'C' ? `${cap(e.side)} edge: embed ${fmt0(e.D)} mm in a ${fmt0(e.chanW)} mm channel` : `${cap(e.side)} edge: cover ${fmt0(c.cover)} mm (min ${fmt0(e.req)}), rebate ${fmt0(e.rebate)} × ${fmt0(e.rebateW)} mm`);
+  lines.push('', 'Engineering guidance only – to be checked and signed off by a registered engineer.');
+  return lines.join('\n');
+}
+async function copyText(t, okMsg) { try { await navigator.clipboard.writeText(t); toast(okMsg); return true; } catch (e) { return false; } }
+function showSheet(html) { const p = $('#sharePanel'); p.innerHTML = html; p.hidden = false; p.scrollIntoView({block: 'nearest'}); }
+document.addEventListener('click', e => { if (e.target.id === 'closeSheet') $('#sharePanel').hidden = true; });
+$('#btnEmail').addEventListener('click', () => {
+  const subj = `Glass design report – ${S.project.project}`, body = summaryText();
+  const href = `mailto:?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body + '\n\n(Attach the saved PDF report.)')}`;
+  showSheet(`<div class="card-h"><h3>Email the report</h3><button type="button" class="small" id="closeSheet">Close</button></div>
+   <p>Save the PDF first, then open your email app with the summary below and attach the PDF. If the email link does nothing here, copy the text instead.</p>
+   <div class="actions"><a class="btn" href="${href}" target="_blank" rel="noopener">Open email app</a><button type="button" id="copySum">Copy summary</button><button type="button" class="primary" id="pdf2">Save PDF report</button></div>
+   <textarea id="sumText" readonly aria-label="Report summary">${esc(body)}</textarea>`);
+});
+$('#btnShare').addEventListener('click', async () => {
+  const text = summaryText();
+  if (!framed && navigator.share) {
+    try { const pdf = await buildPDF(); const file = new File([pdf], pdfName(), {type: 'application/pdf'}); if (navigator.canShare && navigator.canShare({files: [file]})) await navigator.share({title: S.project.project, text, files: [file]}); else await navigator.share({title: S.project.project, text}); return; } catch (e) { /* fall through */ }
+  }
+  showSheet(`<div class="card-h"><h3>Share</h3><button type="button" class="small" id="closeSheet">Close</button></div>
+   <p>Copy the summary, or copy the design code so a colleague can load exactly these inputs in this calculator.</p>
+   <div class="actions"><button type="button" id="copySum">Copy summary</button><button type="button" id="copyCode">Copy design code</button><button type="button" class="primary" id="pdf2">Save PDF report</button></div>
+   <textarea id="sumText" readonly aria-label="Report summary">${esc(text)}</textarea>`);
+});
+const encodeState = () => btoa(unescape(encodeURIComponent(JSON.stringify(S))));
+$('#btnCode').addEventListener('click', () => {
+  showSheet(`<div class="card-h"><h3>Design code</h3><button type="button" class="small" id="closeSheet">Close</button></div>
+   <p>This code holds every input. Keep it with the job file, or paste a code here and load it.</p>
+   <textarea id="codeText" aria-label="Design code">${encodeState()}</textarea>
+   <div class="actions"><button type="button" id="copyCode">Copy code</button><button type="button" class="primary" id="loadCode">Load code</button><button type="button" id="resetAll">Reset to examples</button></div>`);
+});
+document.addEventListener('click', async e => {
+  const id = e.target.id;
+  if (id === 'copySum') { if (!await copyText($('#sumText').value, 'Summary copied')) { $('#sumText').select(); toast('Select and copy the text'); } }
+  if (id === 'copyCode') { const t = encodeState(); if (!await copyText(t, 'Design code copied')) { const ta = $('#codeText') || $('#sumText'); ta.value = t; ta.select(); toast('Select and copy the code'); } }
+  if (id === 'loadCode') { try { S = mergeState(JSON.parse(decodeURIComponent(escape(atob($('#codeText').value.trim()))))); saveState(); renderPicker(); renderRail(); compute(); toast('Design loaded'); } catch (err) { toast('That code could not be read. Copy the whole code and try again.'); } }
+  if (id === 'resetAll') { S = freshState(); saveState(); renderPicker(); renderRail(); compute(); toast('Examples restored'); }
+  if (id === 'pdf2') savePDF();
+});
+const pdfName = () => `${(S.project.ref || 'glass').replace(/[^\w-]+/g, '_')}_${R.type}_glass_report.pdf`;
+async function buildPDF(withPages) {
+  if (!window.jspdf || !window.html2canvas) throw new Error('PDF library did not load.');
+  const root = document.documentElement, prev = root.getAttribute('data-theme');
+  root.setAttribute('data-theme', 'light'); document.body.classList.add('exporting');
+  renderReport();
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  try {
+    const {jsPDF} = window.jspdf, doc = new jsPDF({unit: 'mm', format: 'a4'});
+    const PW = 210, PH = 297, M = 12, CW = PW - 2 * M, top = 16, bottom = PH - 14, K = 5; // K: preview px per mm
+    let y = top, page = 1;
+    const pages = [];
+    const newSheet = () => { if (!withPages) return; const cv = document.createElement('canvas'); cv.width = PW * K; cv.height = PH * K; const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); pages.push(cv); };
+    newSheet();
+    const foot = `${S.project.project} · ${S.project.ref} · engineering guidance – to be checked by a registered engineer`;
+    const footer = () => {
+      doc.setFontSize(8); doc.setTextColor(90); doc.text(foot, M, PH - 7); doc.text(`Page ${page}`, PW - M, PH - 7, {align: 'right'});
+      if (withPages) { const g = pages[pages.length - 1].getContext('2d'); g.fillStyle = '#5a5a5a'; g.font = `${2.8 * K}px Helvetica, Arial, sans-serif`; g.textAlign = 'left'; g.fillText(foot, M * K, (PH - 7) * K); g.textAlign = 'right'; g.fillText(`Page ${page}`, (PW - M) * K, (PH - 7) * K); }
+    };
+    const next = () => { footer(); doc.addPage(); page++; y = top; newSheet(); };
+    const blocks = [...document.querySelectorAll('#report > .rep-head, #report .rsec')];
+    for (const el of blocks) {
+      const cv = await window.html2canvas(el, {scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false});
+      const hmm = cv.height * CW / cv.width;
+      let sy = 0;
+      if (y + Math.min(hmm, 60) > bottom) next();
+      while (sy < cv.height) {
+        const avail = bottom - y, slicePx = Math.min(cv.height - sy, Math.floor(avail * cv.width / CW));
+        const part = document.createElement('canvas'); part.width = cv.width; part.height = slicePx;
+        part.getContext('2d').drawImage(cv, 0, sy, cv.width, slicePx, 0, 0, cv.width, slicePx);
+        const ph = slicePx * CW / cv.width;
+        doc.addImage(part.toDataURL('image/jpeg', 0.92), 'JPEG', M, y, CW, ph);
+        if (withPages) pages[pages.length - 1].getContext('2d').drawImage(part, M * K, y * K, CW * K, ph * K);
+        sy += slicePx; y += ph + 2;
+        if (sy < cv.height) next();
+      }
+    }
+    footer();
+    const blob = doc.output('blob');
+    return withPages ? {blob, pages: pages.map(p => p.toDataURL('image/jpeg', 0.9))} : blob;
+  } finally {
+    document.body.classList.remove('exporting');
+    if (prev === null) root.removeAttribute('data-theme'); else root.setAttribute('data-theme', prev);
+    renderReport();
+  }
+}
+async function saveBlob(blob) {
+  let dl = null;
+  try { dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; } catch (e) { dl = null; }
+  if (dl) { try { await dl.save({filename: pdfName(), data: blob}); toast('PDF saved'); } catch (err) { if (err && err.code !== 'declined') toast('The PDF could not be saved here.'); } }
+  else { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = pdfName(); document.body.appendChild(a); a.click(); a.remove(); toast('PDF downloaded'); }
+}
+async function savePDF() {
+  const b = $('#btnPdf'); b.disabled = true; b.textContent = 'Building PDF…';
+  try { await saveBlob(await buildPDF()); } catch (err) { toast(err.message || 'PDF failed'); }
+  finally { b.disabled = false; b.textContent = 'Save PDF report'; }
+}
+$('#btnPdf').addEventListener('click', savePDF);
+let viewBlob = null;
+async function viewPDF() {
+  const b = $('#btnView'); b.disabled = true; b.textContent = 'Building report…';
+  try {
+    const r = await buildPDF(true); viewBlob = r.blob;
+    const v = $('#pdfView');
+    v.querySelector('.pv-pages').innerHTML = r.pages.map((src, i) => `<img src="${src}" alt="Report page ${i + 1} of ${r.pages.length}">`).join('');
+    v.querySelector('.pv-count').textContent = `${pdfName()} · ${r.pages.length} page${r.pages.length > 1 ? 's' : ''} · A4`;
+    v.hidden = false; document.body.classList.add('pv-open'); v.querySelector('.pv-pages').scrollTop = 0; $('#pvClose').focus();
+  } catch (err) { toast(err.message || 'Report failed'); }
+  finally { b.disabled = false; b.textContent = 'View PDF report'; }
+}
+const closeView = () => { $('#pdfView').hidden = true; document.body.classList.remove('pv-open'); $('#btnView').focus(); };
+$('#btnView').addEventListener('click', viewPDF);
+$('#pvClose').addEventListener('click', closeView);
+$('#pvSave').addEventListener('click', () => { if (viewBlob) saveBlob(viewBlob); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#pdfView').hidden) closeView(); });
+
+renderPicker(); renderRail(); compute();
+
+</script>
+<script>if("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js");</script>
+</body></html>
