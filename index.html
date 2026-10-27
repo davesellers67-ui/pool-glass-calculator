@@ -153,6 +153,15 @@ td.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:now
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;font-size:13px;z-index:20}
 .sheet{display:grid;gap:10px;margin-top:10px}
 .sheet textarea{min-height:120px;font-family:var(--f-mono);font-size:12px}
+.ctab{font-size:12.5px}
+.ctab tr.grp th{background:var(--panel);color:var(--accent);font-family:var(--f-display);text-transform:uppercase;letter-spacing:.06em;font-size:11.5px;text-align:left;padding-top:8px}
+.ctab tr.pnl th{text-align:left;font-size:13px;padding-top:10px}
+.ctab tr.info td{font-size:12px}
+.calcbar{position:sticky;bottom:0;z-index:2;display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 14px;background:var(--panel);border-top:1px solid var(--line);border-radius:0 0 var(--r) var(--r)}
+.calcbar button{flex:0 0 auto}
+.calcbar .muted{font-size:12px}
+.defhint{font-size:12.5px;color:var(--accent);margin-top:3px}
+.sumlist{margin:0;padding-left:18px;display:grid;gap:4px;font-size:13px}
 .csteps{margin:0;padding-left:20px;display:grid;gap:10px}
 .csteps .eq{margin-top:4px}
 /* PDF preview */
@@ -639,22 +648,22 @@ function courseCalc(type, p, c, plies, fPerm) {
   const rho = rhoOf(c), f = c.glass === 'AN' ? 7.0 : fPerm, steps = [];
   const P = d => rho * G_ACC * d / 1000; // Pa, d in mm
   const sq = v => fmt(v, 3);
-  let beta = null, q = null, b = null, note = '', pilk = null;
+  let beta = null, q = null, b = null, note = '', pilk = null, kk = null, pilkK = 0;
   steps.push(`Course design stress f = ${fmt(f, 2)} MPa${c.glass === 'AN' ? ' (course value for annealed glass under water)' : ' (calculator value; the course example is annealed only)'}. Spans are the visible glass sizes; nominal ply thicknesses are used.`);
   if (type === 'vertical') {
     const H = c.height, Wd = c.width, above = Math.max(c.normAbove, c.overflowOn ? c.ovAbove : -Infinity);
     const d = above + H; q = P(d); b = Math.min(H, Wd); const A = Math.max(H, Wd);
-    const k = roarkCoef(Wd >= H ? '1e' : '1d', A / b); beta = k.beta;
+    const k = roarkCoef(Wd >= H ? '1e' : '1d', A / b); beta = k.beta; kk = k;
     steps.push(`Pressure at the bottom of the glass: P = ρ·g·h = ${rho} × 9.81 × ${sq(d / 1000)} = ${fmt0(q)} Pa (${fmt0(above)} mm of water above the top + ${fmt0(H)} mm glass height).`);
     steps.push(`Course approach: the whole pressure is taken as a triangle (zero at the top). ${k.text}`);
     const r = H / Wd, Wp = 1.5 * 9.807 * H * H, Af = 1 - (5 / 6) * r * r / (r ** 4 + 1), Bf = ((r * r / 4) + 1) * r / (r ** 4 + 1);
-    pilk = Math.sqrt(Wp / (f * 1000) * Af * Bf);
+    pilk = Math.sqrt(Wp / (f * 1000) * Af * Bf); pilkK = Wp * Af * Bf / 1000; // σ·t² in N
     steps.push(`Course spreadsheet formula (Pilkington type): r = h/w = ${fmt(r, 3)}, W = 1.5 × 9.807 × h² = ${fmt0(Wp)}, A = 1 − (5/6)·r²/(r⁴+1) = ${fmt(Af, 3)}, B = (r²/4 + 1)·r/(r⁴+1) = ${fmt(Bf, 3)}, t = √(W/f·A·B) = √(${fmt0(Wp)} / ${fmt0(f * 1000)} × ${fmt(Af, 3)} × ${fmt(Bf, 3)}) = ${fmt(pilk, 2)} mm. This formula uses the glass height only, not the water above the top.`);
   } else if (type === 'flat') {
     const d = c.depth + (c.overflowOn ? c.ovRise : 0), tS = plies.reduce((s, v) => s + v, 0);
     const qw = P(d), sw = c.selfWeight ? tS * 2.5 * 9.81 : 0, qi = (c.imposed || 0) * 1000;
     q = qw + sw + qi; b = Math.min(c.length, c.width); const A = Math.max(c.length, c.width);
-    const k = roarkCoef('1a', A / b); beta = k.beta;
+    const k = roarkCoef('1a', A / b); beta = k.beta; kk = k;
     steps.push(`Water pressure P = ${rho} × 9.81 × ${sq(d / 1000)} = ${fmt0(qw)} Pa. Self weight = ${tS} × 2.5 × 9.81 = ${fmt(sw, 2)} Pa${qi ? `. Imposed ${fmt0(qi)} Pa` : ''}. Total q = ${fmt(q, 2)} Pa.`);
     steps.push(k.text);
     if (Math.abs(A / b - 1.25) < 0.05) note = 'The course notes use β = 0.453 for a/b = 1.25, which is the Roark value for a/b = 1.4; at 1.25 the table gives the β above.';
@@ -667,13 +676,13 @@ function courseCalc(type, p, c, plies, fPerm) {
     const hw = Math.min(c.Hw, c.H);
     if (p.id === 'base') {
       const tS = plies.reduce((s, v) => s + v, 0), sw = tS * 2.5 * 9.81; q = P(hw) + sw; b = Math.min(c.L, c.W);
-      const k = roarkCoef('1a', Math.max(c.L, c.W) / b); beta = k.beta;
+      const k = roarkCoef('1a', Math.max(c.L, c.W) / b); beta = k.beta; kk = k;
       steps.push(`Base: water ${fmt0(P(hw))} Pa + self weight ${fmt(sw, 1)} Pa = ${fmt(q, 1)} Pa uniform. ${k.text}`);
     } else {
       q = P(hw); const L = p.a, H = c.H;
       steps.push(`Pressure at the bottom: P = ${rho} × 9.81 × ${sq(hw / 1000)} = ${fmt0(q)} Pa, triangular (the course has no tank example, so its Roark approach is applied).`);
-      if (c.braced) { b = Math.min(L, H); const k = roarkCoef(L >= H ? '1e' : '1d', Math.max(L, H) / b); beta = k.beta; steps.push(k.text); }
-      else { b = L; const k = roarkCoef('2d', H / L); beta = k.beta; steps.push(`Open top (free edge of length ${fmt0(L)} mm). ${k.text}`); }
+      if (c.braced) { b = Math.min(L, H); const k = roarkCoef(L >= H ? '1e' : '1d', Math.max(L, H) / b); beta = k.beta; kk = k; steps.push(k.text); }
+      else { b = L; const k = roarkCoef('2d', H / L); beta = k.beta; kk = k; steps.push(`Open top (free edge of length ${fmt0(L)} mm). ${k.text}`); }
     }
   }
   const treq = Math.sqrt(beta * q * 1e-6 * b * b / f);
@@ -683,10 +692,20 @@ function courseCalc(type, p, c, plies, fPerm) {
   const eqT = pl => Math.sqrt(pl.reduce((s, v) => s + v * v, 0));
   const eqNow = eqT(plies);
   steps.push(`Layered factor (course, slippage): equivalent t = √Σt² = √(${plies.map(v => v + '²').join(' + ')}) = ${fmt(eqNow, 2)} mm ${eqNow >= tGov ? '≥' : '<'} ${fmt(tGov, 2)} mm → ${eqNow >= tGov ? 'passes' : 'fails'} the course check.`);
+  // deflection, course style: Roark α for the same case (cantilever strip for rim-flow), layered factor ∛Σt³
+  const limit = c.defAbs > 0 ? c.defAbs : p.spanShort / (c.defRatio > 0 ? c.defRatio : 250);
+  const cant = type === 'rimflow', alpha = kk ? kk.alpha : null;
+  const sK = beta * q * 1e-6 * b * b, wK = cant ? 1.5 * q * 1e-6 * b ** 4 / c.E : alpha * q * 1e-6 * b ** 4 / c.E;
+  const tW = Math.cbrt(plies.reduce((s, v) => s + v ** 3, 0)), w = wK / tW ** 3, s = Math.max(sK, pilkK) / eqNow ** 2, tReqW = Math.cbrt(wK / limit);
+  steps.push(pilkK > sK ? `Stress in your make-up from the governing spreadsheet formula: σ = W·A·B/t² = ${fmt(pilkK, 0)} / ${fmt(eqNow, 2)}² = ${fmt(s, 2)} MPa (Roark: ${fmt(sK / eqNow ** 2, 2)} MPa; allowed ${fmt(f, 2)} MPa).` : `Stress in your make-up: σ = β·q·b²/t² = ${fmt(sK, 0)} / ${fmt(eqNow, 2)}² = ${fmt(s, 2)} MPa (allowed ${fmt(f, 2)} MPa).`);
+  steps.push(`Deflection (layered factor for deflection ∛Σt³ = ∛(${plies.map(v => v + '³').join(' + ')}) = ${fmt(tW, 2)} mm): ` + (cant
+    ? `the course gives no plate deflection coefficient for rim-flow, so a cantilever strip under the same uniform q is used: y = 12·q·h⁴/(8·E·t³) = 1.5 × ${fmt(q * 1e-6, 6)} × ${fmt0(b)}⁴ / (${c.E} × ${fmt(tW, 2)}³) = ${fmt(w, 2)} mm`
+    : `y = α·q·b⁴/(E·t³) = ${fmt(alpha, 4)} × ${fmt(q * 1e-6, 6)} × ${fmt0(b)}⁴ / (${c.E} × ${fmt(tW, 2)}³) = ${fmt(w, 2)} mm`) + ` (allowed ${fmt(limit, 2)} mm, the calculator limit; the course sets no general limit).`);
+  steps.push(`Minimum equivalent thickness for deflection: t = ∛(${cant ? '1.5·q·h⁴' : 'α·q·b⁴'}/(E·y_allow)) = ${fmt(tReqW, 2)} mm, against ${fmt(tGov, 2)} mm for stress.`);
   const opts = [];
   for (const t of [6, 8, 10, 12, 15, 19, 25]) for (let n = 2; n <= 5; n++) if (Math.sqrt(n) * t >= tGov) { opts.push({plies: Array(n).fill(t), tot: n * t, eq: Math.sqrt(n) * t}); break; }
   opts.sort((x, y) => x.tot - y.tot || x.eq - y.eq);
-  return {f, beta, q, b, treq, pilk, tGov, note, steps, eqNow, ok: eqNow >= tGov, opts: opts.slice(0, 3)};
+  return {f, beta, alpha, q, b, treq, pilk, tGov, note, steps, eqNow, ok: eqNow >= tGov, opts: opts.slice(0, 3), sK, wK, cant, limit, tW, s, w, tReqW, okW: w <= limit};
 }
 
 function candidateMakeups() {
@@ -856,7 +875,9 @@ function renderRail() {
   h += det('geom', 'Size and water levels', GEOM[S.type].map(f => fieldHTML(f, c)).join(''));
   h += det('makeup', 'Glass make-up', plyEditor(c));
   for (const g of GROUPS(c)) h += det(g.id, g.title, g.fields.map(f => fieldHTML(f, c)).join(''));
+  h += `<div class="calcbar"><button class="primary" type="button" id="btnCalc">Calculate</button><span class="muted" id="calcStamp"></span></div>`;
   $('#rail').innerHTML = h;
+  if (R) updateHints();
 }
 $('#rail').addEventListener('toggle', e => { const d = e.target; if (d.dataset && d.dataset.g) d.open ? openGroups.add(d.dataset.g) : openGroups.delete(d.dataset.g); }, true);
 $('#rail').addEventListener('input', e => {
@@ -873,6 +894,11 @@ $('#rail').addEventListener('change', e => {
   renderRail(); restoreFocus(el.id); compute();
 });
 $('#rail').addEventListener('click', e => {
+  if (e.target.id === 'btnCalc') {
+    clearTimeout(timer); compute();
+    const res = $('#results'); if (res.getBoundingClientRect().top > window.innerHeight * 0.8) res.scrollIntoView({behavior: 'smooth', block: 'start'});
+    toast('Calculated'); return;
+  }
   const c = S[S.type];
   if (e.target.id === 'addPly') { c.plies.push(c.plies[c.plies.length - 1] || 12); renderRail(); compute(); }
   const d = e.target.closest('[data-del]'); if (d && c.plies.length > 1) { c.plies.splice(+d.dataset.del, 1); renderRail(); compute(); }
@@ -899,10 +925,21 @@ function compute() {
     R = {type, c, sp, st, panels, coarse, okA: panels.every(x => x.res.A ? x.res.A.ok : false), okB: panels.every(x => x.res.B.ok)};
     R.hasA = panels.every(x => x.res.A);
     R.sugg = suggestions(R);
-    renderResults(); renderReport();
+    renderResults(); renderReport(); updateHints();
   } catch (err) {
     $('#results').innerHTML = `<div class="card"><h3>Could not calculate</h3><p>${esc(err.message)}</p><p class="muted">Check the supports: a plate needs at least one clamped edge or two supported edges to be stable.</p></div>`;
   }
+}
+
+// live hints next to the deflection limit inputs and the calculate stamp
+function updateHints() {
+  if (!R || R.type !== S.type) return;
+  const c = R.c, d = c.defRatio > 0 ? c.defRatio : 250;
+  const txt = R.panels.map(x => `${R.panels.length > 1 ? x.p.name.split(' ')[0] + ': ' : ''}${fmt0(x.p.spanShort)} ÷ ${fmt0(d)} = ${fmt(x.p.spanShort / d)} mm`).join(' · ');
+  const put = (k, html) => { const el = document.querySelector(`#rail [data-k="${k}"]`); if (!el) return; const f = el.closest('.field'); let hn = f.querySelector('.defhint'); if (!hn) { hn = document.createElement('div'); hn.className = 'defhint'; f.appendChild(hn); } hn.innerHTML = html; };
+  put('defRatio', `= <b>${txt}</b> (${esc(R.panels[0].p.spanLabel)})`);
+  put('defAbs', c.defAbs > 0 ? `Override in use: <b>${fmt(c.defAbs)} mm</b> replaces span ÷ ${fmt0(d)}.` : `0 = use span ÷ ${fmt0(d)} (<b>${txt}</b>).`);
+  const st = $('#calcStamp'); if (st) st.textContent = `Last calculated ${new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'})}`;
 }
 
 // ---------- suggestions ----------
@@ -1203,16 +1240,56 @@ const isDark = () => { const t = document.documentElement.dataset.theme; return 
 // ---------- results ----------
 let feaMode = 'w', feaPanel = 0;
 const pill = (ok, yes = 'Pass', no = 'Fail') => ok === null ? '<span class="pill na">n/a</span>' : ok === 'warn' ? '<span class="pill warn">Warning</span>' : `<span class="pill ${ok ? 'ok' : 'bad'}">${ok ? yes : no}</span>`;
+// Stress / deflection / minimum thickness from each method for one panel. scen 'B' = structural plies, 'A' = sacrificial broken (structural plies carry the load)
+function methodSet(x, R, scen) {
+  const c = R.c, r = x.res, f = R.sp.f, lim = r.limit, fea = x.fea, h = x.hand, k = x.course;
+  const eff = scen === 'A' && r.A ? r.A.broken.eff : r.intact;
+  const feaS = scen === 'A' && r.A ? r.A.s : r.B.s, feaW = scen === 'A' && r.A ? r.A.w : r.B.w;
+  const out = [{name: 'FEA (design basis)', key: 'fea', s: feaS, w: feaW, sAllow: f, wAllow: lim,
+    tS: Math.sqrt(6 * r.Md / f), tW: fea.tref * Math.cbrt(Math.abs(fea.wmax) * r.sc / lim)}];
+  if (h.M !== null) {
+    const tw0 = r.intact.hw;
+    out.push({name: 'Hand (Roark)', key: 'hand', s: 6 * h.M * c.gF / eff.hs ** 2, w: h.w * (tw0 / eff.hw) ** 3, sAllow: f, wAllow: lim, tS: h.treq, tW: Math.cbrt(h.w * tw0 ** 3 / lim)});
+  } else out.push({name: 'Hand (Roark)', key: 'hand', s: null, w: null, sAllow: f, wAllow: lim, tS: null, tW: null});
+  if (k) out.push({name: 'Nick Wright course', key: 'course', s: k.s, w: k.w, sAllow: k.f, wAllow: k.limit, tS: k.tGov, tW: k.tReqW});
+  return out;
+}
 function renderResults() {
   const c = R.c, P = R.panels, x0 = P[0];
   const util = (s, f) => `${fmt(100 * s / f, 0)}%`;
   const worst = (fn) => P.reduce((m, x) => Math.max(m, fn(x)), 0);
-  const vA = R.hasA ? `<dl class="kv">${P.map(x => { const A = x.res.A; return `<dt>${P.length > 1 ? esc(x.p.name) + ' – all' : 'All'} plies intact</dt><dd>${fmt(A.sIntact)} MPa · ${fmt(A.wIntact)} mm</dd>
-       <dt>Sacrificial ply broken: stress</dt><dd>${fmt(A.s)} / ${fmt(R.sp.f)} MPa (${util(A.s, R.sp.f)})</dd><dt>Sacrificial ply broken: deflection</dt><dd>${fmt(A.w)} / ${fmt(x.res.limit)} mm</dd>${A.warnHalf ? `<dt class="warn-t">Warning: more than half the glass thickness</dt><dd class="warn-t">&gt; ${fmt(A.tNom / 2, 1)} mm</dd>` : ''}${A.topVar !== null && c.topLimitOn ? `<dt>Top edge variation</dt><dd>${fmt(A.topVar)} / ${fmt(c.topLimit)} mm</dd>` : ''}<dt>Deflection at design stress</dt><dd>${fmt(A.w * R.sp.f / A.s)} mm</dd><dt>A structural ply breaks</dt><dd>${A.post ? `${fmt(A.post.s)} / ${fmt(R.st.f)} MPa` : '–'}</dd>`; }).join('')}</dl>
-     <div class="muted" style="font-size:12.5px">${c.sacT} mm sacrificial ply added on the ${c.sacPos === 'water' ? 'water' : 'dry'} side of the structural plies. While intact the glass is stronger than without it; if it breaks, the structural plies carry the full permanent water load on their own.</div>`
+  const ct = (x, scen) => {
+    const m = methodSet(x, R, scen), r = x.res, A = r.A, rows = [];
+    const grp = t => rows.push(`<tr class="grp"><th colspan="4">${t}</th></tr>`);
+    const row = (name, act, allow, ok, unit) => rows.push(`<tr><td>${name}</td><td class="n">${act === null ? '–' : fmt(act) + ' ' + unit}</td><td class="n">${allow === null ? '–' : fmt(allow) + ' ' + unit}</td><td>${act === null ? pill(null) : pill(ok)}</td></tr>`);
+    if (P.length > 1) rows.push(`<tr class="pnl"><th colspan="4">${esc(x.p.name)}</th></tr>`);
+    if (scen === 'A') {
+      grp('All plies intact (for information, FEA)');
+      row('Stress', A.sIntact, R.sp.f, A.sIntact <= R.sp.f, 'MPa'); row('Deflection', A.wIntact, r.limit, A.wIntact <= r.limit, 'mm');
+    }
+    grp(scen === 'A' ? 'Stress test – sacrificial ply broken' : 'Stress test');
+    m.forEach(k => row(k.name, k.s, k.sAllow, k.s !== null && k.s <= k.sAllow, 'MPa'));
+    grp(scen === 'A' ? 'Deflection test – sacrificial ply broken' : 'Deflection test');
+    m.forEach(k => row(k.name, k.w, k.wAllow, k.w !== null && k.w <= k.wAllow, 'mm'));
+    const wF = scen === 'A' ? A.w : r.B.w, half = scen === 'A' ? A.tNom / 2 : r.halfT;
+    grp('Half glass thickness check (warning only)');
+    rows.push(`<tr><td>FEA</td><td class="n">${fmt(wF)} mm</td><td class="n">${fmt(half, 1)} mm</td><td>${pill(wF > half ? 'warn' : true, 'OK')}</td></tr>`);
+    const tv = scen === 'A' ? A.topVar : r.topVarIntact;
+    if (tv !== null && c.topLimitOn) { grp('Top-edge even-flow test'); row('FEA', tv, c.topLimit, tv <= c.topLimit, 'mm'); }
+    grp(scen === 'A' ? 'Post-breakage test – a structural ply broken, sacrificial intact' : 'Post-breakage test – one ply broken');
+    const post = scen === 'A' ? A.post : r.B.post;
+    if (post) row(`FEA, ${fmt0(c.repDays)} days`, post.s, R.st.f, post.s <= R.st.f, 'MPa');
+    else rows.push(`<tr><td>FEA</td><td class="n">–</td><td class="n">–</td><td>${r.B.monoAllowed && scen === 'B' ? pill(true, 'Permitted') : pill(false)}</td></tr>`);
+    const sF = scen === 'A' ? A.s : r.B.s;
+    rows.push(`<tr class="info"><td>Deflection at design stress (FEA)</td><td class="n">${fmt(wF * R.sp.f / sF)} mm</td><td colspan="2" class="muted">for choosing a limit</td></tr>`);
+    return rows.join('');
+  };
+  const thead = `<thead><tr><th>Test / method</th><th class="n">Actual</th><th class="n">Allowed</th><th>Result</th></tr></thead>`;
+  const vA = R.hasA ? `<div class="tbl"><table class="ctab">${thead}<tbody>${P.map(x => ct(x, 'A')).join('')}</tbody></table></div>
+     <div class="muted" style="font-size:12.5px">${c.sacT} mm sacrificial ply added on the ${c.sacPos === 'water' ? 'water' : 'dry'} side. While intact the glass is stronger than without it; if it breaks, the structural plies carry the full permanent water load on their own. The overall result uses the FEA.</div>`
     : `<div class="muted">No sacrificial ply. Choose one under Glass make-up to see this option.</div>`;
-  const vB = `<dl class="kv">${P.map(x => `<dt>${esc(x.p.name)} stress</dt><dd>${fmt(x.res.B.s)} / ${fmt(R.sp.f)} MPa (${util(x.res.B.s, R.sp.f)})</dd><dt>Deflection</dt><dd>${fmt(x.res.B.w)} / ${fmt(x.res.limit)} mm</dd>${x.res.largeDefl ? `<dt class="warn-t">Warning: more than half the glass thickness</dt><dd class="warn-t">&gt; ${fmt(x.res.halfT, 1)} mm</dd>` : ''}${x.res.topVarIntact !== null && c.topLimitOn ? `<dt>Top edge variation</dt><dd>${fmt(x.res.topVarIntact)} / ${fmt(c.topLimit)} mm</dd>` : ''}<dt>Deflection at design stress</dt><dd>${fmt(x.res.B.w * R.sp.f / x.res.B.s)} mm</dd><dt>After one ply breaks</dt><dd>${x.res.B.post ? `${fmt(x.res.B.post.s)} / ${fmt(R.st.f)} MPa` : (x.res.B.monoAllowed ? 'monolithic – permitted' : 'no residual capacity')}</dd>`).join('')}</dl>
-     <div class="muted" style="font-size:12.5px">${c.plies.length > 1 ? `Structural plies only (${c.plies.join(' + ')} mm). A broken ply must be replaced within ${fmt0(c.repDays)} days; the remaining plies are checked for that period.` : 'Single sheet of glass: it has no strength left if it breaks.'}</div>`;
+  const vB = `<div class="tbl"><table class="ctab">${thead}<tbody>${P.map(x => ct(x, 'B')).join('')}</tbody></table></div>
+     <div class="muted" style="font-size:12.5px">${c.plies.length > 1 ? `Structural plies only (${c.plies.join(' + ')} mm). A broken ply must be replaced within ${fmt0(c.repDays)} days.` : 'Single sheet of glass: it has no strength left if it breaks.'} The overall result uses the FEA; hand and course rows are for comparison.</div>`;
   const fr = x0.frame;
   const emb = fr.find(e => e.type === 'C'), cov = fr.find(e => e.type === 'S');
   const figs = [
@@ -1254,7 +1331,7 @@ function renderResults() {
     <h4 style="margin:14px 0 6px">Without a sacrificial ply</h4><div class="tbl"><table>${head}${optRows(op.B, 'B')}</table></div>`; })()}
   </div>
   ${R.type === 'rimflow' && chanSteps(x0, c).length ? `<div class="card"><div class="card-h"><h3>Depth of glass into the channel</h3><span class="muted">${fmt0(x0.frame.find(f => f.type === 'C').D)} mm embedment</span></div><ol class="csteps">${chanSteps(x0, c).map(([t, s]) => `<li><b>${t}</b><div class="eq">${s}</div></li>`).join('')}</ol></div>` : ''}
-  <div class="card"><div class="card-h"><h3>Course method comparison</h3><button type="button" class="small" id="btnCourse">Use course inputs</button></div>${compareTable(R, false)}</div>
+  <div class="card"><div class="card-h"><h3>Method comparison: FEA, hand and Nick Wright course</h3><button type="button" class="small" id="btnCourse">Use course inputs</button></div>${compareTable(R, false)}<div class="muted" style="font-size:12.5px;margin-top:6px">Min t = equivalent monolithic thickness needed. “Use course inputs” sets 7.0 MPa, nominal thickness and no overflow so the FEA runs on the same basis as the course.</div></div>
   <div class="card"><div class="card-h"><h3>Recommendations</h3></div><ol class="sugg">${R.sugg.map(s => `<li>${s}</li>`).join('')}</ol></div>`;
   $('#legendSlot').appendChild(legendCanvas());
   drawFEA();
@@ -1278,21 +1355,45 @@ $('#results').addEventListener('click', e => {
   }
 });
 function compareTable(R, rep) {
-  const c = R.c;
-  const rows = R.panels.map(x => {
-    const k = x.course, fea = Math.sqrt(6 * x.res.Md / R.sp.f);
-    return `<tr><td>${esc(x.p.name)}</td><td class="n">${k ? fmt(k.treq, 2) : '–'}${k && k.pilk ? ` / ${fmt(k.pilk, 2)}` : ''}</td><td class="n">${x.hand.M !== null ? fmt(x.hand.treq, 2) : '–'}</td><td class="n">${fmt(fea, 2)}</td><td class="n">${k ? `${fmt(k.eqNow, 1)} ${k.ok ? '✓' : '✗'}` : '–'}</td><td class="n">${k ? k.opts.map(o => o.plies.join('×')).join(', ') : '–'}</td></tr>`;
-  }).join('');
+  const c = R.c, G = GLASS[c.glass].name.toLowerCase();
+  let h = '';
+  const sumLines = [];
+  for (const x of R.panels) {
+    const m = methodSet(x, R, 'B');
+    if (R.panels.length > 1) h += `<h4 style="margin:10px 0 4px">${esc(x.p.name)}</h4>`;
+    h += `<div class="tbl"><table class="ctab"><thead><tr><th>Method</th><th class="n">Actual stress</th><th class="n">Allowed stress</th><th class="n">Actual deflection</th><th class="n">Allowed deflection</th><th class="n">Min t for stress</th><th class="n">Min t for deflection</th><th>Governs</th></tr></thead><tbody>` +
+      m.map(k => {
+        const gov = k.tS === null ? '–' : k.tW > k.tS ? 'Deflection' : 'Stress';
+        return `<tr><td>${k.name}</td><td class="n">${k.s === null ? '–' : fmt(k.s) + ' MPa'} ${k.s === null ? '' : k.s <= k.sAllow ? '✓' : '✗'}</td><td class="n">${fmt(k.sAllow)} MPa</td><td class="n">${k.w === null ? '–' : fmt(k.w) + ' mm'} ${k.w === null ? '' : k.w <= k.wAllow ? '✓' : '✗'}</td><td class="n">${fmt(k.wAllow)} mm</td><td class="n">${k.tS === null ? '–' : fmt(k.tS, 1) + ' mm'}</td><td class="n">${k.tW === null ? '–' : fmt(k.tW, 1) + ' mm'}</td><td>${gov}</td></tr>`;
+      }).join('') + `</tbody></table></div>`;
+    const F = m[0], uS = F.s / F.sAllow, uW = F.w / F.wAllow, tNeed = Math.max(F.tS, F.tW);
+    const others = m.slice(1).filter(k => k.tS !== null).map(k => `${k.name.replace(' (Roark)', '')} ${fmt(Math.max(k.tS, k.tW), 1)} mm`).join(', ');
+    sumLines.push(`${R.panels.length > 1 ? `<b>${esc(x.p.name)}:</b> the` : 'The'} FEA needs an equivalent monolithic thickness of <b>${fmt(F.tS, 1)} mm for stress</b> and <b>${fmt(F.tW, 1)} mm for deflection</b>, so <b>${F.tW > F.tS ? 'deflection' : 'stress'} governs</b> at ${fmt(tNeed, 1)} mm${others ? ` (${others} by the other methods)` : ''}. Your make-up is at ${fmt(100 * uS, 0)}% of the allowed stress and ${fmt(100 * uW, 0)}% of the allowed deflection.`);
+  }
+  const x0 = R.panels[0], F0 = methodSet(x0, R, 'B')[0], defGov = F0.w / F0.wAllow > F0.s / F0.sAllow;
+  const lam = c.plies.length > 1;
   const why = [];
-  if (R.type === 'vertical') why.push('The course Roark method takes the whole pressure as a triangle starting at zero. The water above the window adds a uniform pressure over the full height, which the hand and FEA methods include. The course spreadsheet formula (second value) uses the glass height only.');
-  if (R.type === 'flat') why.push('The course notes use β = 0.453 (the Roark value for a/b = 1.4) for their 1000 × 800 example; the correct a/b = 1.25 value is lower.');
-  if (R.type === 'rimflow') why.push('The course applies a uniform pressure with β = 0.866. The calculator applies the true triangular pressure over the full height with a clamped base, as in the course’s own cantilever check, and that governs.');
-  const bits = [c.nominalThk ? 'nominal thickness' : 'SANS 50572 minimum thickness (12 mm is taken as 11.7 mm)', c.strengthMode === 'custom' ? `a design stress of ${fmt(R.sp.f, 2)} MPa` : `the EN 16612 strength of ${fmt(R.sp.f, 2)} MPa`];
-  if (R.type !== 'tank') bits.push('spans to the middle of the edge bearing');
-  if (c.overflowOn) bits.push('the overflow level');
-  why.push(`The calculator uses ${bits.slice(0, -1).join(', ')} and ${bits[bits.length - 1]}. The course uses 7.0 MPa, nominal thickness and the visible glass size.`);
-  return `<div class="tbl"><table><tr><th>Panel</th><th>Course t mm</th><th>Hand (Roark) t mm</th><th>FEA t mm</th><th>Your make-up √Σt² mm</th><th>Course laminate options</th></tr>${rows}</table></div>
-    <ul class="muted" style="font-size:12.5px;margin:8px 0 0;padding-left:18px">${why.map(w => `<li>${w}</li>`).join('')}</ul>${rep ? '' : '<div class="muted" style="font-size:12.5px;margin-top:6px">Required equivalent monolithic thickness from each method. The pass or fail verdicts above use the FEA. “Use course inputs” sets 7.0 MPa, nominal thickness and no overflow so the FEA runs on the same basis as the course.</div>'}`;
+  if (R.type === 'vertical') why.push('<b>Load shape.</b> The course Roark method takes the pressure as a triangle starting at zero at the top. With water above the window there is already pressure at the top edge, so the true load is a trapezoid. The hand method and the FEA include it. The course spreadsheet formula uses the glass height only.');
+  if (R.type === 'flat') why.push('<b>Roark coefficient.</b> The course notes use β = 0.453 (the Roark value for a/b = 1.4) for their 1000 × 800 example; at a/b = 1.25 the table gives about 0.42.');
+  if (R.type === 'rimflow') why.push('<b>Load and support model.</b> The course applies a uniform pressure with β = 0.866. The FEA applies the true triangular pressure over the full height with a clamped base and the end supports modelled, and the hand method uses a cantilever strip. For the course deflection a cantilever strip is used because the course gives no plate coefficient.');
+  why.push(`<b>Spans.</b> The hand method and the FEA measure spans to the middle of the edge bearing${R.type !== 'tank' ? ` (visible size + ${fmt0(c.cover)} mm cover)` : ''}; the course uses the visible glass size.`);
+  why.push(`<b>Glass thickness.</b> ${c.nominalThk ? 'All methods are using nominal thickness (course setting).' : 'The hand method and the FEA use SANS 50572 minimum thickness (12 mm is taken as 11.7 mm); the course uses nominal thickness.'}`);
+  why.push(`<b>Allowed stress.</b> ${c.strengthMode === 'custom' ? `The hand method and the FEA use your entered ${fmt(R.sp.f, 2)} MPa` : `The hand method and the FEA use the EN 16612 value of ${fmt(R.sp.f, 2)} MPa for ${G} under a 50-year load`}; the course uses ${c.glass === 'AN' ? '7.0 MPa' : 'the same value for non-annealed glass'}.`);
+  why.push('<b>Laminate.</b> The course uses √Σt² for stress and ∛Σt³ for deflection with nominal plies. The calculator uses the EN 16612 effective thickness with the interlayer shear factor ω (0 for PVB under permanent water load), which gives the same result for equal plies when ω = 0.');
+  why.push('<b>Plate coefficients.</b> Roark tables are for ν = 0.3 and are read off at a few aspect ratios; adding a uniform and a triangular case adds two maxima that are not at the same point, so the hand method is a little conservative.');
+  let s = `<h4 style="margin:14px 0 4px">Summary</h4><ul class="sumlist">${sumLines.map(l => `<li>${l}</li>`).join('')}</ul>
+  <h4 style="margin:12px 0 4px">Why the methods differ</h4><ul class="sumlist">${why.map(w => `<li>${w}</li>`).join('')}</ul>
+  <h4 style="margin:12px 0 4px">Which one is correct?</h4>
+  <p>They are all correct for the assumptions they make; they answer slightly different questions. The <b>FEA</b> models the real pressure shape, the real supports and the laminate with minimum thickness, and it is checked against Roark Table 11.4, so it is the most accurate and is the one this calculator uses for the pass or fail result. The <b>hand method</b> uses the same inputs with tabulated Roark coefficients, and should land within about 5–10% of the FEA; it is the independent check an engineer would sign. The <b>course method</b> is a quick sizing method with simplified loads and nominal thickness: good for a first size and for training, but it can be on the unsafe side (for example, ignoring the water above a window) or the conservative side (for example, β for the wrong aspect ratio). When the three disagree, the FEA with the hand check governs.</p>
+  <h4 style="margin:12px 0 4px">Why the stress can be low while the deflection fails</h4>
+  <p>${defGov ? 'In this design deflection governs. ' : 'In this design stress governs, but deflection often governs pool glass. '}${c.glass !== 'AN' ? `${GLASS[c.glass].name} glass is about ${fmt(R.sp.f / 7.36, 0)} times stronger than annealed glass (${fmt(R.sp.f, 1)} MPa allowed), but heat treatment does not change its stiffness (E = ${c.E} MPa for all glass), so the stress is low while the deflection is the same as annealed glass. ` : ''}${lam ? `With PVB under permanent water load the plies slide over each other (ω = ${fmt(c.omega, 2)}), so ${c.plies.length} × ${c.plies[0]} mm acts like ${fmt(R.panels[0].res.intact.hs, 1)} mm for stress but only ${fmt(R.panels[0].res.intact.hw, 1)} mm for deflection. ` : ''}Stress grows with span² ÷ t², but deflection grows with span⁴ ÷ t³, so long spans${R.type === 'rimflow' ? ' and tall free-edged rim-flow panes' : ''} are controlled by deflection. The span ÷ ${fmt0(c.defRatio || 250)} limit is a serviceability limit (sealing, appearance, comfort), not a strength limit. To pass, use thicker plies (deflection falls with t³), a stiffer interlayer with a tested ω (ionoplast), shorter spans or extra supports, or agree a larger deflection limit with the engineer.</p>`;
+  if (rep) s += `<h4 style="margin:12px 0 4px">Allowed stress and deflection in each method, and industry practice</h4>
+  <div class="tbl"><table><thead><tr><th>Method</th><th>Allowed stress</th><th>Allowed deflection</th></tr></thead><tbody>
+  <tr><td>FEA and hand method (this calculator)</td><td>${c.strengthMode === 'custom' ? `${fmt(R.sp.f, 2)} MPa entered by you` : `EN 16612 strength for a 50-year permanent load: ${fmt(R.sp.f, 2)} MPa for ${G} (annealed 7.36 MPa, heat-strengthened 28.2 MPa, toughened 69.9 MPa)`}; ${fmt(R.st.f, 2)} MPa for the ${fmt0(c.repDays)}-day post-breakage check</td><td>span ÷ ${fmt0(c.defRatio || 250)} by default (${limitText(x0, c)}), or your mm override; warning above half the glass thickness</td></tr>
+  <tr><td>Nick Wright course</td><td>7.0 MPa for annealed glass under water</td><td>No general limit given; rim-flow top-edge change below 0.5 mm for even flow</td></tr>
+  <tr><td>Industry and codes</td><td>SANS 10137 §6.8.2.3: water load is sustained, so allowed stresses are much lower than for wind. Published sheets: AQUA 7.36 MPa (annealed); aquarium practice 19.2 MPa ÷ 3.8 safety factor = 5.05 MPa (annealed). Tanks to SANS 10137 Tables 13 and 14 (DIN 32622).</td><td>SANS 10137 §5.10.2.9 sets no fixed glass deflection limit and leaves it to the client or specifier; frames are limited to span ÷ 175 (§5.10.2.2). Span ÷ 250 is common practice for underwater glazing to protect seals and avoid visible distortion; keep the deflection below half the glass thickness so the small-deflection theory still applies.</td></tr>
+  </tbody></table></div>`;
+  return h + s;
 }
 // Step-by-step working for glass clamped in a channel (rim-flow bottom edge)
 function chanSteps(x, c) {
@@ -1329,7 +1430,8 @@ function renderReport() {
   const c = R.c, pj = S.project, P = R.panels; let sn = 0;
   const step = (body) => `<div class="step"><div class="sn">${String(++sn).padStart(2, '0')}</div><div>${body}</div></div>`;
   const eq = s => `<div class="eq">${s}</div>`;
-  const sec = (no, title, inner) => `<section class="rsec"><h2><span class="no">${no}</span>${title}</h2>${inner}</section>`;
+  let secNo = 0;
+  const sec = (no, title, inner) => `<section class="rsec"><h2><span class="no">${++secNo}</span>${title}</h2>${inner}</section>`;
   const rho = c.water === 'sea' ? 1040 : c.water === 'custom' ? c.rho : 1000;
   let h = `<div class="rep-head"><div><div class="eyebrow">Glass design calculation · ${TYPES[R.type].label}</div><h1 style="font-size:28px">${esc(pj.project || 'Pool glass design')}</h1></div>
     <div class="meta"><span class="muted">Client</span><span>${esc(pj.client || '–')}</span><span class="muted">Site</span><span>${esc(pj.site || '–')}</span><span class="muted">Designed by</span><span>${esc(pj.engineer || '–')}</span><span class="muted">Reference</span><span>${esc(pj.ref || '–')}</span><span class="muted">Date</span><span>${esc(pj.date || '')}</span></div></div>`;
@@ -1395,7 +1497,6 @@ function renderReport() {
     k.steps.forEach(s => { hc += step(eq(s)); });
     if (k.note) hc += step(k.note);
   }
-  hc += compareTable(R, true);
   h += sec('6', 'Hand calculation', hc + `<p class="muted">Roark coefficients are for ν = 0.3; the FEA uses ν = ${fmt(c.nu, 2)}.</p>`);
   // 7 FEA
   let fh = '';
@@ -1414,6 +1515,7 @@ function renderReport() {
   fh += step(`Mesh convergence (${esc(P[0].p.name)}): coarse mesh ${ff.nx} × ${ff.ny} gives M = ${fmt(Math.abs(ff.mmax) * P[0].res.sc, 1)} and w_ref = ${fmt(Math.abs(ff.wmax) * P[0].res.sc, 2)}; design mesh ${f0.nx} × ${f0.ny} gives M = ${fmt(Math.abs(f0.mmax) * P[0].res.sc, 1)} and w_ref = ${fmt(Math.abs(f0.wmax) * P[0].res.sc, 2)} (change ${fmt(100 * (Math.abs(f0.mmax) / Math.abs(ff.mmax) - 1), 1)}% and ${fmt(100 * (Math.abs(f0.wmax) / Math.abs(ff.wmax) - 1), 1)}%).`);
   fh += step(`Verification of the solver against Roark Table 11.4 (ν = 0.3): case 1a a/b = 1: β 0.286 (Roark 0.2874), α 0.0444 (0.0444); case 1e a/b = 2: β 0.316 (0.32); case 2a a/b = 1: β 0.668 (0.67); cantilever strip M = qh²/6 within 0.5%. The analysis is linear (small deflection); membrane action would reduce stresses in 4-edge supported glass.`);
   h += sec('7', 'Finite-element analysis', fh);
+  h += sec('7a', 'Comparison of methods: stress, deflection and minimum thickness', compareTable(R, true));
   // 8 checks
   let ch = '';
   for (const x of P) {
